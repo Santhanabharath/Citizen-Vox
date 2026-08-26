@@ -1,0 +1,298 @@
+/* Public Layout */
+/* Public Layout */
+.public-layout {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--near-black);
+  color: var(--white);
+}
+
+.public-header {
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--spacing-xl);
+  max-width: 1400px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.logo-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.logo-text {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: inherit;
+}
+
+.public-main {
+  flex: 1;
+}
+
+.public-footer {
+  padding: var(--spacing-3xl) 0 var(--spacing-xl);
+  border-top: 1px solid var(--border-dark);
+  text-align: center;
+  background: var(--near-black);
+  color: var(--white);
+}
+
+/* App Layout Structure */
+.app-layout {
+  min-height: 100vh;
+  background-color: var(--bg);
+}
+
+/* Citizen Layout Mobile First */
+.citizen-layout {
+  display: flex;
+  flex-direction: column;
+}
+
+.app-header {
+  height: 64px;
+  padding: 0 var(--spacing-md);
+  background-color: var(--surface);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 40;
+}
+
+.app-main {
+  flex: 1;
+  padding-top: var(--spacing-md);
+  padding-bottom: 80px; /* space for mobile nav */
+}
+
+.mobile-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 72px;
+  background-color: var(--near-black);
+  border-top: 1px solid var(--border-dark);
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  z-index: 40;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.mobile-nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  font-size: 0.65rem;
+  font-weight: 500;
+  gap: 6px;
+  flex: 1;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.mobile-nav-item.active {
+  color: var(--primary-green);
+}
+
+.primary-item {
+  position: relative;
+  top: -12px;
+  background: var(--primary-green);
+  color: var(--near-black);
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: 4px solid var(--bg);
+  flex: none;
+  margin: 0 8px;
+  box-shadow: 0 4px 12px rgba(143, 234, 99, 0.3);
+}
+
+.primary-item .nav-label {
+  display: none;
+}
+
+/* Admin/Authority Layout Desktop First */
+.admin-layout {
+  display: flex;
+}
+
+.sidebar {
+  width: 260px;
+  background-color: var(--near-black);
+  color: var(--white);
+  border-right: 1px solid var(--border-dark);
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+}
+
+.sidebar-header {
+  height: 80px;
+  padding: 0 var(--spacing-lg);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border-dark);
+}
+
+.role-badge {
+  font-size: 0.65rem;
+  padding: 4px 8px;
+  background-color: rgba(143, 234, 99, 0.1);
+  color: var(--primary-green);
+  border-radius: var(--radius-full);
+  text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.sidebar-nav {
+  padding: var(--spacing-lg) 0;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.sidebar-item {
+  display: flex;
+  align-items: center;
+  padding: 12px var(--spacing-lg);
+  color: #A0A5A0;
+  gap: var(--spacing-md);
+  transition: all 0.2s;
+  cursor: pointer;
+  background: none;
+  border: none;
+  width: 100%;
+  text-align: left;
+  font-family: var(--font-family);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  text-decoration: none;
+  position: relative;
+}
+
+.sidebar-item:hover {
+  color: var(--white);
+  background-color: rgba(255, 255, 255, 0.03);
+}
+
+.sidebar-item.active {
+  color: var(--primary-green);
+  background-color: rgba(143, 234, 99, 0.05);
+}
+
+.sidebar-item.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background-color: var(--primary-green);
+  border-radius: 0 4px 4px 0;
+}
+
+.sidebar-footer {
+  padding: var(--spacing-md) 0;
+  border-top: 1px solid var(--border-dark);
+}
+
+.logout-btn {
+  color: var(--danger);
+}
+
+.logout-btn:hover {
+  background-color: #FEE2E2; /* light red */
+  color: var(--danger);
+}
+
+.admin-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.admin-header {
+  height: 80px;
+  background-color: var(--surface);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--spacing-xl);
+  position: sticky;
+  top: 0;
+  z-index: 30;
+}
+
+.header-user {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+
+.user-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.user-name {
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.user-role {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.avatar-placeholder {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  background-color: var(--near-black);
+  color: var(--primary-green);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.admin-main {
+  flex: 1;
+  padding: var(--spacing-xl);
+}
+
+/* Media Queries */
+@media (max-width: 768px) {
+  .admin-layout {
+    flex-direction: column;
+  }
+  .sidebar {
+    display: none; /* In real app, toggle with drawer */
+  }
+}
+@media (min-width: 769px) {
+  .mobile-nav {
+    display: none;
+  }
+  .citizen-main {
+    padding-bottom: var(--spacing-xl);
+  }
+}

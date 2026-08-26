@@ -1,0 +1,6 @@
+name = "civicpulse-ai-worker"
+main = "index.js"
+compatibility_date = "2024-05-12"
+
+# In production, GEMINI_API_KEY should be added using `wrangler secret put GEMINI_API_KEY`
+# For local development, create a .dev.vars file with GEMINI_API_KEY=your_key

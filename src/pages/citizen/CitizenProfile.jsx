@@ -67,6 +67,7 @@ const CitizenProfile = () => {
   // Simple thresholds for hackathon:
   const level = Math.max(1, Math.floor(Math.sqrt(currentXP / 100)) + 1);
   const nextLevelXP = Math.pow(level, 2) * 100;
+  const previousLevelXP = level === 1 ? 0 : Math.pow(level - 1, 2) * 100;
   
   const rank = level < 3 ? "Civic Novice" : level < 6 ? "Civic Guardian" : "City Champion";
   
@@ -79,7 +80,9 @@ const CitizenProfile = () => {
     { id: 6, name: "Top 10%", icon: <Star size={24} />, description: "Rank in the top 10% of users", earned: currentXP > 1000 || profile.badges?.includes(6), color: "#FFD700", bg: "rgba(255,215,0,0.1)" },
   ];
 
-  const progressPercentage = (currentXP / nextLevelXP) * 100;
+  const xpInCurrentLevel = currentXP - previousLevelXP;
+  const xpNeededForNextLevel = nextLevelXP - previousLevelXP;
+  const progressPercentage = Math.min(100, Math.max(0, (xpInCurrentLevel / xpNeededForNextLevel) * 100));
 
   return (
     <div style={{ paddingBottom: '40px' }}>

@@ -52,5 +52,43 @@ export const aiService = {
       console.error("AI Service Error:", error);
       throw error;
     }
+  },
+
+  /**
+   * Securely asks Civic Copilot a question based on localized context data.
+   */
+  askCopilot: async (question, contextData, role) => {
+    try {
+      // Use deployed worker URL in production or local for dev
+      const COPILOT_URL = WORKER_URL.replace('/analyze-issue', '/copilot');
+      
+      const response = await fetch(COPILOT_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          question,
+          contextData,
+          role
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Copilot backend failed.');
+      }
+
+      const data = await response.json();
+      
+      if (!data.success || !data.answer) {
+        throw new Error('Invalid response from Copilot.');
+      }
+
+      return data.answer;
+    } catch (error) {
+      console.error("Copilot Error:", error);
+      throw error;
+    }
   }
 };
+

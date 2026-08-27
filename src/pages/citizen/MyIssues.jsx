@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../hooks/useAuth';
 import { issueService } from '../../services/issueService';
 import IssueCard from '../../components/citizen/IssueCard';
-import { Search, Filter } from 'lucide-react';
+import { Search, Filter, ChevronDown } from 'lucide-react';
 import Input from '../../components/common/Input';
 import Button from '../../components/common/Button';
 
@@ -13,6 +14,14 @@ const MyIssues = () => {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+
+  const statuses = [
+    { id: 'all', label: 'All Statuses' },
+    { id: 'submitted', label: 'Submitted' },
+    { id: 'in_progress', label: 'In Progress' },
+    { id: 'resolved', label: 'Resolved' }
+  ];
 
   useEffect(() => {
     if (user) {
@@ -53,18 +62,38 @@ const MyIssues = () => {
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'var(--surface)', padding: '0 0.5rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
-          <Filter size={16} color="var(--text-secondary)" />
-          <select 
-            value={statusFilter} 
-            onChange={(e) => setStatusFilter(e.target.value)}
-            style={{ border: 'none', outline: 'none', background: 'transparent', padding: '0.5rem', fontFamily: 'var(--font-family)', color: 'var(--text-primary)' }}
+        <div style={{ position: 'relative', flexShrink: 0 }}>
+          <div 
+            onClick={() => setDropdownOpen(!dropdownOpen)}
+            style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--surface)', padding: '12px 16px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)', cursor: 'pointer', height: '100%', minWidth: '160px', justifyContent: 'space-between' }}
           >
-            <option value="all">All Statuses</option>
-            <option value="submitted">Submitted</option>
-            <option value="in_progress">In Progress</option>
-            <option value="resolved">Resolved</option>
-          </select>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Filter size={18} color="var(--text-secondary)" />
+              <span style={{ fontSize: '0.9375rem', fontWeight: 600, color: 'var(--text-primary)' }}>{statuses.find(s => s.id === statusFilter)?.label}</span>
+            </div>
+            <ChevronDown size={16} color="var(--text-secondary)" />
+          </div>
+          
+          <AnimatePresence>
+            {dropdownOpen && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 10 }}
+                style={{ position: 'absolute', top: 'calc(100% + 8px)', right: 0, background: 'var(--white)', borderRadius: '12px', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', overflow: 'hidden', zIndex: 50, minWidth: '100%', border: '1px solid var(--border-light)' }}
+              >
+                {statuses.map(s => (
+                  <div 
+                    key={s.id}
+                    onClick={() => { setStatusFilter(s.id); setDropdownOpen(false); }}
+                    style={{ padding: '12px 16px', fontSize: '0.9375rem', fontWeight: 500, cursor: 'pointer', background: statusFilter === s.id ? 'rgba(143,234,99,0.1)' : 'transparent', color: statusFilter === s.id ? 'var(--primary-green)' : 'var(--near-black)', borderBottom: '1px solid #f1f5f9' }}
+                  >
+                    {s.label}
+                  </div>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
 

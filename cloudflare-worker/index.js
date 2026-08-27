@@ -40,6 +40,9 @@ export default {
       } else if (pathname === "/api/analyze-intelligence") {
         if (!env.GEMINI_API_KEY) throw new Error("GEMINI_API_KEY is not configured.");
         return await handleAnalyzeIntelligence(request, env);
+      } else if (pathname === "/api/copilot") {
+        if (!env.GEMINI_API_KEY) throw new Error("GEMINI_API_KEY is not configured.");
+        return await handleCopilot(request, env);
       } else {
         return new Response("Not Found", { status: 404, headers: corsHeaders });
       }
@@ -278,4 +281,52 @@ IMPORTANT RULES:
     headers: { ...corsHeaders, 'Content-Type': 'application/json' }
   });
 }
+
+async function handleCopilot(request, env) {
+  const body = await request.json();
+  const { question, contextData, role } = body;
+
+  if (!question || !contextData) {
+    return new Response(JSON.stringify({ error: "Missing question or contextData" }), { 
+      status: 400, headers: { "Access-Control-Allow-Origin": "*", 'Content-Type': 'application/json' } 
+    });
+  }
+
+  const systemPrompt = `You are Civic Copilot, an AI assistant for a CivicPulse ${role}.
+Your job is to answer questions about civic operations strictly using the provided context data.
+
+IMPORTANT RULES:
+- DO NOT invent facts, numbers, or issues.
+- ONLY answer based on the provided context data.
+- If the context data does not contain the answer, say "I don't have enough data to answer that."
+- Format your response in clean Markdown.
+- Be concise and actionable.
+`;
+
+  let userPrompt = `CONTEXT DATA:\n${JSON.stringify(contextData, null, 2)}\n\nQUESTION:\n${question}`;
+
+  const geminiPayload = {
+    contents: [{ role: "user", parts: [{ text: systemPrompt }, { text: userPrompt }] }]
+  };
+
+  const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${env.GEMINI_API_KEY}`;
+  
+  const response = await fetch(geminiUrl, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(geminiPayload)
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to communicate with AI provider.");
+  }
+
+  const data = await response.json();
+  const answer = data.candidates?.[0]?.content?.parts?.[0]?.text || "I was unable to process the data.";
+
+  return new Response(JSON.stringify({ success: true, answer }), {
+    headers: { "Access-Control-Allow-Origin": "*", 'Content-Type': 'application/json' }
+  });
+}
+
 

@@ -12,7 +12,8 @@ import {
   limit,
   getDocs,
   getCountFromServer,
-  where
+  where,
+  arrayUnion
 } from 'firebase/firestore';
 
 export const gamificationService = {
@@ -45,17 +46,9 @@ export const gamificationService = {
     const docRef = doc(db, 'gamificationProfiles', userId);
     
     try {
-      const docSnap = await getDoc(docRef);
-      if (docSnap.exists()) {
-        await updateDoc(docRef, {
-          xp: increment(amount)
-        });
-      } else {
-        await setDoc(docRef, {
-          xp: amount,
-          badges: []
-        });
-      }
+      await setDoc(docRef, {
+        xp: increment(amount)
+      }, { merge: true });
     } catch (error) {
       console.error("Error adding XP:", error);
     }
@@ -70,20 +63,9 @@ export const gamificationService = {
     const docRef = doc(db, 'gamificationProfiles', userId);
     
     try {
-      const docSnap = await getDoc(docRef);
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        if (!data.badges?.includes(badgeId)) {
-          await updateDoc(docRef, {
-            badges: [...(data.badges || []), badgeId]
-          });
-        }
-      } else {
-        await setDoc(docRef, {
-          xp: 0,
-          badges: [badgeId]
-        });
-      }
+      await setDoc(docRef, {
+        badges: arrayUnion(badgeId)
+      }, { merge: true });
     } catch (error) {
       console.error("Error awarding badge:", error);
     }

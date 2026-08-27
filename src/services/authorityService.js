@@ -10,18 +10,14 @@ export const authorityService = {
       let q = collection(db, 'issueClusters');
       let queryConstraints = [];
 
-      // Role-based filtering: Department Officers only see their department's issues (or unassigned).
-      // For MVP, we might show them unassigned OR assigned to their dept.
-      // Firestore 'OR' queries exist but let's keep it simple: filter assigned to their department.
-      // Wait, if they are unassigned, the department officer still needs to see them to assign them.
-      // So perhaps we don't filter at the query level if it's complex, we filter client-side for MVP, 
-      // OR we just assume municipal admin can see everything.
-      
-      if (user.role === 'department_officer' && user.department) {
-        // Querying for assignedDepartment == department OR assignedDepartment == null isn't directly supported via single where unless using 'in'.
-        // For now, we will fetch the top priority items and filter client side if needed for Department Officers, 
-        // OR we can rely on a specific field like `targetDepartment` which doesn't exist yet.
-        // Let's just fetch all and filter client side for MVP to ensure they see unassigned ones too.
+      if (user.role !== 'super_admin') {
+        if (user.municipalityId) {
+          queryConstraints.push(where('municipalityId', '==', user.municipalityId));
+        }
+      }
+
+      if (user.role === 'department_officer' && user.departmentId) {
+        queryConstraints.push(where('departmentId', '==', user.departmentId));
       }
 
       if (filters.status && filters.status !== 'All') {
@@ -48,13 +44,6 @@ export const authorityService = {
       const issues = [];
       snapshot.forEach(doc => {
         const data = doc.data();
-        
-        // MVP Client-side role filter for Dept Officers
-        if (user.role === 'department_officer' && user.department) {
-          if (data.assignedDepartment && data.assignedDepartment !== user.department) {
-            return; // Skip issues assigned to other departments
-          }
-        }
         
         issues.push({ id: doc.id, ...data });
       });
@@ -102,7 +91,19 @@ export const authorityService = {
     try {
       // For MVP, we'll fetch the last 100 recent active clusters and compute stats.
       // In production, we'd use Firestore Aggregation queries (COUNT(), etc.)
-      const q = query(collection(db, 'issueClusters'), orderBy('createdAt', 'desc'), limit(100));
+      let queryConstraints = [orderBy('createdAt', 'desc'), limit(500)];
+      
+      if (user.role !== 'super_admin') {
+        if (user.municipalityId) {
+          queryConstraints.push(where('municipalityId', '==', user.municipalityId));
+        }
+      }
+      
+      if (user.role === 'department_officer' && user.departmentId) {
+        queryConstraints.push(where('departmentId', '==', user.departmentId));
+      }
+
+      const q = query(collection(db, 'issueClusters'), ...queryConstraints);
       const snapshot = await getDocs(q);
       
       let total = 0;
@@ -113,13 +114,6 @@ export const authorityService = {
 
       snapshot.forEach(doc => {
         const data = doc.data();
-        
-        // Apply dept officer filter
-        if (user.role === 'department_officer' && user.department) {
-          if (data.assignedDepartment && data.assignedDepartment !== user.department) {
-            return;
-          }
-        }
         
         total++;
         if (data.priority?.level === 'Critical') critical++;

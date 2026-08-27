@@ -23,14 +23,45 @@ const AuthorityLayout = () => {
     }
   };
   
-  const menuItems = [
-    { icon: <LayoutDashboard size={20} />, label: 'Dashboard', path: '/authority' },
-    { icon: <FileText size={20} />, label: 'Priority Queue', path: '/authority/issues' },
-    { icon: <Map size={20} />, label: 'Territory Map', path: '/authority/map' },
-    { icon: <LayoutDashboard size={20} />, label: 'Civic Intelligence', path: '/authority/intelligence' },
-    { icon: <Users size={20} />, label: 'Departments', path: '/authority/departments' },
-    { icon: <Settings size={20} />, label: 'Settings', path: '/authority/settings' },
-  ];
+  let menuItems = [];
+  let roleBadge = "Authority";
+  
+  if (user?.role === 'super_admin') {
+    roleBadge = "Super Admin";
+    menuItems = [
+      { icon: <LayoutDashboard size={20} />, label: 'Command Center', path: '/admin' },
+      { icon: <Map size={20} />, label: 'Municipalities', path: '/admin/municipalities' },
+      { icon: <Users size={20} />, label: 'Users', path: '/admin/users' },
+      { icon: <FileText size={20} />, label: 'Departments', path: '/admin/departments' },
+      { icon: <FileText size={20} />, label: 'All Issues', path: '/admin/issues' },
+      { icon: <LayoutDashboard size={20} />, label: 'Intelligence', path: '/admin/intelligence' },
+      { icon: <FileText size={20} />, label: 'Integrity', path: '/admin/integrity' },
+      { icon: <FileText size={20} />, label: 'Audit Logs', path: '/admin/audit-logs' },
+      { icon: <Settings size={20} />, label: 'Settings', path: '/admin/settings' },
+    ];
+  } else if (user?.role === 'municipal_admin') {
+    roleBadge = "Municipal Admin";
+    menuItems = [
+      { icon: <LayoutDashboard size={20} />, label: 'Dashboard', path: '/authority' },
+      { icon: <FileText size={20} />, label: 'Priority Queue', path: '/authority/queue' },
+      { icon: <Map size={20} />, label: 'Command Map', path: '/authority/map' },
+      { icon: <Users size={20} />, label: 'Departments', path: '/authority/departments' },
+      { icon: <FileText size={20} />, label: 'Escalations', path: '/authority/escalations' },
+      { icon: <LayoutDashboard size={20} />, label: 'Civic Memory', path: '/authority/memory' },
+      { icon: <FileText size={20} />, label: 'Performance', path: '/authority/performance' },
+      { icon: <FileText size={20} />, label: 'Integrity', path: '/authority/integrity' },
+      { icon: <LayoutDashboard size={20} />, label: 'Civic Copilot', path: '/authority/copilot' },
+    ];
+  } else if (user?.role === 'department_officer') {
+    roleBadge = "Dept. Officer";
+    menuItems = [
+      { icon: <LayoutDashboard size={20} />, label: 'Dashboard', path: '/department' },
+      { icon: <FileText size={20} />, label: 'Priority Queue', path: '/department/queue' },
+      { icon: <Users size={20} />, label: 'Workers', path: '/department/workers' },
+      { icon: <LayoutDashboard size={20} />, label: 'Civic Memory', path: '/department/memory' },
+      { icon: <FileText size={20} />, label: 'Performance', path: '/department/performance' },
+    ];
+  }
 
   if (loading) return <div>Loading...</div>;
   if (!user || user.role === 'citizen') return null;
@@ -43,7 +74,7 @@ const AuthorityLayout = () => {
             <div className="logo-mark"></div>
             <span className="logo-text">CivicPulse</span>
           </div>
-          <span className="role-badge">Authority</span>
+          <span className="role-badge">{roleBadge}</span>
         </div>
         
         <nav className="sidebar-nav">

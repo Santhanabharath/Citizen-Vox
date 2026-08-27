@@ -1,156 +1,180 @@
-import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, MapPin, Navigation } from 'lucide-react';
-import { taskService } from '../../services/taskService';
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
+import { ArrowLeft, MapPin, PlayCircle, CheckCircle, FileText } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
-import TaskStatus from '../../components/worker/TaskStatus';
-import PriorityBadge from '../../components/priority/PriorityBadge';
-import WorkCompletionForm from '../../components/worker/WorkCompletionForm';
-import Button from '../../components/common/Button';
+import { taskService } from '../../services/taskService';
+import EvidenceUploader from '../../components/resolution/EvidenceUploader';
 
 const WorkerTaskDetails = () => {
   const { id } = useParams();
-  const navigate = useNavigate();
   const { user } = useAuth();
+  const navigate = useNavigate();
+  
   const [task, setTask] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
 
-  const fetchTask = async () => {
-    setLoading(true);
-    try {
-      const data = await taskService.getTaskDetails(id);
-      if (data) setTask(data);
-      else setError("Task not found.");
-    } catch (err) {
-      setError("Failed to load task.");
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Completion Form State
+  const [beforeImage, setBeforeImage] = useState(null);
+  const [afterImage, setAfterImage] = useState(null);
+  const [workDescription, setWorkDescription] = useState('');
 
   useEffect(() => {
+    const fetchTask = async () => {
+      try {
+        const data = await taskService.getTaskDetails(id);
+        if (data) {
+          setTask(data);
+          if (data.beforeEvidence) setBeforeImage(data.beforeEvidence);
+          if (data.afterEvidence) setAfterImage(data.afterEvidence);
+          if (data.workDescription) setWorkDescription(data.workDescription);
+        } else {
+          setError("Task not found.");
+        }
+      } catch (err) {
+        setError("Failed to load task details.");
+      } finally {
+        setLoading(false);
+      }
+    };
     fetchTask();
   }, [id]);
 
-  const handleAccept = async () => {
-    setActionLoading(true);
-    try {
-      await taskService.acceptTask(id, user.uid);
-      await fetchTask();
-    } catch (err) {
-      setError(err.message || "Failed to accept task. Another worker may have claimed it.");
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const handleStart = async () => {
+  const handleStartWork = async () => {
     setActionLoading(true);
     try {
       await taskService.startTask(id, user.uid);
-      await fetchTask();
+      setTask(prev => ({ ...prev, currentStatus: 'In Progress' }));
     } catch (err) {
-      setError("Failed to start task.");
+      console.error(err);
+      alert("Failed to start task.");
     } finally {
       setActionLoading(false);
     }
   };
 
-  const handleComplete = async (completionData) => {
+  const handleCompleteWork = async (e) => {
+    e.preventDefault();
+    if (!beforeImage || !afterImage || !workDescription.trim()) {
+      alert("Please provide before/after photos and a work description.");
+      return;
+    }
+
     setActionLoading(true);
     try {
-      await taskService.completeTask(
-        id, 
-        user.uid, 
-        completionData.workDescription, 
-        completionData.beforeEvidence, 
-        completionData.afterEvidence
-      );
-      await fetchTask();
+      await taskService.completeTask(id, user.uid, workDescription, beforeImage, afterImage);
+      setTask(prev => ({ ...prev, currentStatus: 'Awaiting Verification' }));
     } catch (err) {
-      setError("Failed to submit completion.");
+      console.error(err);
+      alert("Failed to submit completion.");
     } finally {
       setActionLoading(false);
     }
   };
 
-  const openDirections = () => {
-    if (task?.latitude && task?.longitude) {
-      window.open(`https://www.google.com/maps/dir/?api=1&destination=${task.latitude},${task.longitude}`, '_blank');
-    }
-  };
-
-  if (loading) return <div style={{ padding: '2rem', textAlign: 'center' }}>Loading task...</div>;
-  if (error || !task) return <div style={{ padding: '2rem', color: 'var(--danger)' }}>{error || "Task not found."}</div>;
+  if (loading) return <div className="p-6">Loading task...</div>;
+  if (error || !task) return <div className="p-6">{error}</div>;
 
   return (
-    <div style={{ maxWidth: '600px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-      
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-        <button onClick={() => navigate('/worker/tasks')} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', padding: '0.5rem', margin: '-0.5rem', cursor: 'pointer' }}>
-          <ArrowLeft size={24} />
-        </button>
-        <h1 className="text-h3" style={{ margin: 0, flex: 1 }}>Task Details</h1>
-        <TaskStatus status={task.currentStatus} />
-      </div>
+    <div style={{ padding: '1rem', maxWidth: '600px', margin: '0 auto', paddingBottom: '6rem' }}>
+      <Link to="/worker/dashboard" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-secondary)', textDecoration: 'none', marginBottom: '1.5rem', fontSize: '0.9375rem' }}>
+        <ArrowLeft size={16} /> Back to My Work
+      </Link>
 
-      {/* Task Info Card */}
-      <div style={{ background: 'var(--surface)', padding: '1.5rem', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+      <div style={{ background: 'var(--surface)', padding: '1.5rem', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)', marginBottom: '1.5rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
           <div>
-            <span className="text-small text-muted" style={{ textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-              {task.category?.replace('_', ' ')}
+            <span style={{ 
+              padding: '0.2rem 0.6rem', 
+              borderRadius: 'var(--radius-full)', 
+              fontSize: '0.7rem', 
+              fontWeight: '700',
+              textTransform: 'uppercase',
+              background: 'var(--surface-soft)',
+              color: 'var(--text-primary)'
+            }}>
+              {task.currentStatus}
             </span>
-            <h2 className="text-h2" style={{ marginTop: '0.25rem', marginBottom: '0.5rem', fontSize: '1.25rem' }}>{task.title}</h2>
+            <h1 className="text-h2" style={{ marginTop: '0.5rem' }}>{task.title}</h1>
           </div>
-          {task.priority && <PriorityBadge level={task.priority.level} score={task.priority.finalScore} />}
         </div>
         
-        <p className="text-body" style={{ color: 'var(--text-secondary)', margin: 0, whiteSpace: 'pre-wrap' }}>
+        <p className="text-body" style={{ color: 'var(--text-secondary)', whiteSpace: 'pre-wrap', marginBottom: '1rem' }}>
           {task.description}
         </p>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: '1rem', background: 'var(--surface-soft)', borderRadius: 'var(--radius-md)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-primary)' }}>
+            <MapPin size={16} color="var(--text-muted)" />
+            <span className="text-small">{task.locationName || 'Location unknown'}</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-primary)' }}>
+            <FileText size={16} color="var(--text-muted)" />
+            <span className="text-small">Priority: {task.priority?.level || 'Normal'}</span>
+          </div>
+        </div>
       </div>
 
-      {/* Location Card */}
-      {task.latitude && task.longitude && (
-        <div style={{ background: 'var(--surface)', padding: '1.25rem', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-primary)', fontWeight: '500' }}>
-            <MapPin size={20} color="var(--primary)" /> View on Map
-          </div>
-          <Button variant="outline" size="small" onClick={openDirections} style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-            <Navigation size={14} /> Directions
-          </Button>
+      {/* Action Area based on status */}
+      {task.currentStatus === 'Assigned' || task.currentStatus === 'Accepted' || task.currentStatus === 'Verified' ? (
+        <div style={{ textAlign: 'center', padding: '2rem 1rem' }}>
+          <button 
+            onClick={handleStartWork}
+            disabled={actionLoading || task.currentStatus === 'Verified'}
+            className="btn-primary"
+            style={{ width: '100%', padding: '1rem', fontSize: '1.125rem', display: 'flex', justifyContent: 'center', gap: '0.5rem', borderRadius: 'var(--radius-md)' }}
+          >
+            <PlayCircle size={24} /> {actionLoading ? 'Starting...' : 'Start Work Now'}
+          </button>
+        </div>
+      ) : task.currentStatus === 'In Progress' ? (
+        <div style={{ background: 'var(--surface)', padding: '1.5rem', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)' }}>
+          <h2 className="text-h3" style={{ marginBottom: '1.5rem' }}>Complete Work Order</h2>
+          <form onSubmit={handleCompleteWork}>
+            
+            <EvidenceUploader 
+              label="Before Photo (Required)" 
+              onUpload={setBeforeImage}
+              defaultImage={beforeImage}
+            />
+            
+            <EvidenceUploader 
+              label="After Photo (Required)" 
+              onUpload={setAfterImage}
+              defaultImage={afterImage}
+            />
+
+            <div style={{ marginBottom: '1.5rem' }}>
+              <label className="text-body" style={{ fontWeight: '600', display: 'block', marginBottom: '0.75rem' }}>
+                Work Details
+              </label>
+              <textarea 
+                value={workDescription}
+                onChange={(e) => setWorkDescription(e.target.value)}
+                placeholder="Describe the repairs made, materials used, etc."
+                required
+                style={{ width: '100%', padding: '1rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)', background: 'var(--bg-main)', color: 'var(--text-primary)', minHeight: '100px', resize: 'vertical' }}
+              />
+            </div>
+
+            <button 
+              type="submit"
+              disabled={actionLoading || !beforeImage || !afterImage || !workDescription}
+              className="btn-primary"
+              style={{ width: '100%', padding: '1rem', fontSize: '1.125rem', display: 'flex', justifyContent: 'center', gap: '0.5rem', borderRadius: 'var(--radius-md)' }}
+            >
+              <CheckCircle size={24} /> {actionLoading ? 'Submitting...' : 'Submit Completion'}
+            </button>
+          </form>
+        </div>
+      ) : (
+        <div style={{ textAlign: 'center', padding: '3rem 1rem', background: 'var(--success-light)', borderRadius: 'var(--radius-lg)', color: 'var(--success-dark)' }}>
+          <CheckCircle size={48} style={{ margin: '0 auto 1rem' }} />
+          <h3 className="text-h3">Work Submitted</h3>
+          <p style={{ marginTop: '0.5rem' }}>Your completion report is awaiting verification.</p>
         </div>
       )}
-
-      {/* Execution Workflow */}
-      <div style={{ marginTop: '1rem' }}>
-        {task.currentStatus === 'Assigned' && (
-          <Button variant="primary" onClick={handleAccept} disabled={actionLoading} style={{ width: '100%', padding: '1rem', fontSize: '1.125rem' }}>
-            {actionLoading ? 'Accepting...' : 'Accept Task'}
-          </Button>
-        )}
-
-        {task.currentStatus === 'Accepted' && (
-          <Button variant="primary" onClick={handleStart} disabled={actionLoading} style={{ width: '100%', padding: '1rem', fontSize: '1.125rem' }}>
-            {actionLoading ? 'Starting...' : 'Start Work'}
-          </Button>
-        )}
-
-        {task.currentStatus === 'In Progress' && (
-          <WorkCompletionForm workerId={user.uid} onComplete={handleComplete} />
-        )}
-
-        {task.currentStatus === 'Completed by Worker' && (
-          <div style={{ background: 'var(--success-soft)', color: 'var(--success-dark)', padding: '1.5rem', borderRadius: 'var(--radius-lg)', textAlign: 'center', fontWeight: '600' }}>
-            Work completion submitted. Pending verification.
-          </div>
-        )}
-      </div>
-
     </div>
   );
 };

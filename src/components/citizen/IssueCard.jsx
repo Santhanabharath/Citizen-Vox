@@ -1,13 +1,14 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, CheckCircle, XCircle } from 'lucide-react';
+import { ArrowRight, CheckCircle, XCircle, Trash2 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useLanguage } from '../../hooks/useLanguage';
 import { issueService } from '../../services/issueService';
 
-const IssueCard = ({ issue, showConfidence = false }) => {
+const IssueCard = ({ issue, showConfidence = false, onDelete }) => {
   const { user } = useAuth();
   const { t } = useLanguage();
+  const [isDeleting, setIsDeleting] = useState(false);
   const priority = issue.priority?.level || 'Medium';
   const confidence = issue.confidenceScore || 0;
   
@@ -16,6 +17,18 @@ const IssueCard = ({ issue, showConfidence = false }) => {
     const success = await issueService.verifyResolution(issue.id, isVerified);
     if (success) {
       alert(isVerified ? "Thank you for verifying! Issue Closed." : "Notified authorities. Issue escalated.");
+    }
+  };
+
+  const handleDelete = async (e) => {
+    e.preventDefault();
+    if (window.confirm(t('action.confirmDelete') || "Are you sure you want to delete this issue?")) {
+      setIsDeleting(true);
+      const success = await issueService.deleteIssue(issue.id);
+      if (success && onDelete) {
+        onDelete(issue.id);
+      }
+      setIsDeleting(false);
     }
   };
   
@@ -52,6 +65,16 @@ const IssueCard = ({ issue, showConfidence = false }) => {
               </div>
             </div>
           </div>
+          
+          {user?.uid === issue.reportedBy && (
+            <button 
+              onClick={handleDelete}
+              disabled={isDeleting}
+              style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: 'none', borderRadius: '50%', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', opacity: isDeleting ? 0.5 : 1 }}
+            >
+              <Trash2 size={16} />
+            </button>
+          )}
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '4px', paddingTop: '12px', borderTop: '1px solid var(--border-light)' }}>

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft, MapPin } from 'lucide-react';
+import { useAuth } from '../../hooks/useAuth';
 import { authorityService } from '../../services/authorityService';
 import IssueStatus from '../../components/citizen/IssueStatus';
 import PriorityCard from '../../components/priority/PriorityCard';
@@ -16,6 +17,7 @@ import 'leaflet/dist/leaflet.css';
 
 const AuthorityIssueDetails = () => {
   const { id } = useParams();
+  const { user } = useAuth();
   const [issue, setIssue] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -45,7 +47,7 @@ const AuthorityIssueDetails = () => {
 
   return (
     <div style={{ padding: '2rem', maxWidth: '1400px', margin: '0 auto', background: 'var(--background)' }}>
-      <Link to="/authority" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-secondary)', textDecoration: 'none', marginBottom: '1.5rem', fontSize: '0.9375rem' }}>
+      <Link to={user?.role === 'department_officer' ? '/department' : '/authority'} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-secondary)', textDecoration: 'none', marginBottom: '1.5rem', fontSize: '0.9375rem' }}>
         <ArrowLeft size={16} /> Back to Dashboard
       </Link>
 

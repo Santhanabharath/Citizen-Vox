@@ -1,116 +1,109 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { MapPin, Navigation, Clock, AlertTriangle, CheckCircle, ArrowRight } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
-import { taskService } from '../../services/taskService';
-import Button from '../../components/common/Button';
+import { db } from '../../firebase/config';
+import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
+import { Link } from 'react-router-dom';
+import { ClipboardList, MapPin, Clock } from 'lucide-react';
 
 const WorkerDashboard = () => {
   const { user } = useAuth();
-  const navigate = useNavigate();
   const [tasks, setTasks] = useState([]);
-  const [completedCount, setCompletedCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const fetchTasks = async () => {
+      try {
+        if (!user) return;
+        const q = query(
+          collection(db, 'issueClusters'),
+          where('assignedWorker', '==', user.uid)
+        );
+        const snapshot = await getDocs(q);
+        const fetchedTasks = [];
+        snapshot.forEach(doc => fetchedTasks.push({ id: doc.id, ...doc.data() }));
+        
+        // Sort in memory to avoid needing complex composite indexes for MVP
+        fetchedTasks.sort((a, b) => b.priority?.finalScore - a.priority?.finalScore);
+        
+        setTasks(fetchedTasks);
+      } catch (err) {
+        console.error("Failed to load worker tasks:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
     fetchTasks();
   }, [user]);
 
-  const fetchTasks = async () => {
-    if (!user) return;
-    try {
-      const allTasks = await taskService.getWorkerTasks(user.uid);
-      const activeTasks = allTasks.filter(t => t.currentStatus !== 'Awaiting Verification' && t.currentStatus !== 'Verified Resolved');
-      const completedTasks = allTasks.filter(t => t.currentStatus === 'Awaiting Verification' || t.currentStatus === 'Verified Resolved');
-      
-      setTasks(activeTasks.slice(0, 3));
-      setCompletedCount(completedTasks.length);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
-  };
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-full">
+        <div className="spinner" style={{ width: '40px', height: '40px', border: '3px solid var(--border)', borderTopColor: 'var(--accent)', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
+      </div>
+    );
+  }
 
   return (
-    <div style={{ paddingBottom: '80px', maxWidth: '600px', margin: '0 auto', background: 'var(--off-white)', minHeight: '100vh' }}>
-      
-      {/* Dark Header */}
-      <div style={{ padding: '24px 24px 32px', background: 'var(--near-black)', color: 'var(--white)', borderRadius: '0 0 24px 24px', marginBottom: '24px' }}>
-        <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>Field Operations,</p>
-        <h1 className="text-h2" style={{ marginBottom: '8px' }}>{user?.displayName || 'Worker'}</h1>
-        
-        <div style={{ display: 'flex', gap: '16px', marginTop: '24px' }}>
-          <div style={{ flex: 1, background: 'rgba(255,255,255,0.05)', padding: '16px', borderRadius: '16px', border: '1px solid var(--border-dark)' }}>
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 600 }}>Active Tasks</div>
-            <div style={{ fontSize: '1.5rem', fontWeight: 800, marginTop: '4px' }}>{tasks.length}</div>
-          </div>
-          <div style={{ flex: 1, background: 'rgba(255,255,255,0.05)', padding: '16px', borderRadius: '16px', border: '1px solid var(--border-dark)' }}>
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 600 }}>Completed</div>
-            <div style={{ fontSize: '1.5rem', fontWeight: 800, marginTop: '4px', color: 'var(--success)' }}>{completedCount}</div>
-          </div>
-        </div>
-      </div>
+    <div style={{ padding: '1rem', maxWidth: '600px', margin: '0 auto', paddingBottom: '5rem' }}>
+      <header style={{ marginBottom: '1.5rem' }}>
+        <h1 className="text-h2">My Work Orders</h1>
+        <p className="text-muted text-small">Assigned by {user?.department || 'Department'}</p>
+      </header>
 
-      <div style={{ padding: '0 24px' }}>
-        
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-          <h3 className="text-h4">Current Assignment</h3>
-          <Link to="/worker/tasks" style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 500 }}>
-            View All <ArrowRight size={14} />
-          </Link>
+      {tasks.length === 0 ? (
+        <div style={{ padding: '3rem 1rem', textAlign: 'center', background: 'var(--surface)', borderRadius: 'var(--radius-lg)' }}>
+          <ClipboardList size={40} color="var(--text-muted)" style={{ margin: '0 auto 1rem' }} />
+          <h3 className="text-h3">No pending tasks</h3>
+          <p className="text-muted text-small mt-1">You currently have no active work orders assigned to you.</p>
         </div>
-
-        {loading ? (
-          <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>Loading tasks...</div>
-        ) : tasks.length === 0 ? (
-          <div className="card-premium" style={{ textAlign: 'center', padding: '2rem' }}>
-            <CheckCircle size={40} style={{ color: 'var(--success)', margin: '0 auto 16px' }} />
-            <h3 style={{ fontSize: '1.125rem', fontWeight: 600, marginBottom: '8px' }}>All caught up!</h3>
-            <p className="text-small text-muted">You have no active tasks assigned.</p>
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            {tasks.map(task => {
-              const priority = task.priority?.level || 'Medium';
-              const isCritical = priority.toLowerCase() === 'critical';
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          {tasks.map(task => (
+            <Link 
+              key={task.id} 
+              to={`/worker/tasks/${task.id}`}
+              style={{ 
+                display: 'block', 
+                background: 'var(--surface)', 
+                padding: '1.25rem', 
+                borderRadius: 'var(--radius-lg)', 
+                textDecoration: 'none', 
+                color: 'inherit',
+                border: '1px solid var(--border)'
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
+                <span style={{ 
+                  padding: '0.2rem 0.6rem', 
+                  borderRadius: 'var(--radius-full)', 
+                  fontSize: '0.7rem', 
+                  fontWeight: '700',
+                  textTransform: 'uppercase',
+                  background: task.currentStatus === 'In Progress' ? 'var(--warning)' : 'var(--surface-soft)',
+                  color: task.currentStatus === 'In Progress' ? 'black' : 'var(--text-primary)'
+                }}>
+                  {task.currentStatus || 'Assigned'}
+                </span>
+                <span className="text-small text-muted" style={{ fontWeight: '600', color: task.priority?.level === 'Critical' ? 'var(--danger)' : 'inherit' }}>
+                  {task.priority?.level || 'Normal'}
+                </span>
+              </div>
               
-              return (
-                <div key={task.id} className="card-premium" style={{ padding: '20px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
-                    <span style={{ 
-                      background: isCritical ? 'var(--danger-soft)' : 'var(--warning-light)', 
-                      color: isCritical ? 'var(--danger-dark)' : 'var(--warning-dark)', 
-                      padding: '4px 12px', borderRadius: 'var(--radius-full)', fontSize: '0.75rem', fontWeight: 700 
-                    }}>
-                      {priority.toUpperCase()}
-                    </span>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600, background: 'var(--surface-soft)', padding: '4px 8px', borderRadius: '4px' }}>
-                      {task.status || 'Assigned'}
-                    </span>
-                  </div>
-                  
-                  <h3 style={{ fontSize: '1.125rem', fontWeight: 600, marginBottom: '8px', lineHeight: 1.3 }}>{task.issueTitle || 'Assigned Task'}</h3>
-                  
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-secondary)', fontSize: '0.875rem', marginBottom: '20px' }}>
-                    <MapPin size={16} /> {task.location?.address || 'Location provided'}
-                  </div>
-
-                  <div style={{ display: 'flex', gap: '12px' }}>
-                    <Button variant="outline" style={{ flex: 1, padding: '12px' }}>
-                       <Navigation size={18} />
-                    </Button>
-                    <Button variant="primary" style={{ flex: 3, padding: '12px' }} onClick={() => navigate(`/worker/tasks/${task.id}`)}>
-                       View Details
-                    </Button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-      </div>
+              <h3 className="text-body" style={{ fontWeight: '600', marginBottom: '0.5rem', lineHeight: '1.3' }}>{task.title}</h3>
+              
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                <span className="text-small text-muted" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                  <MapPin size={12} /> {task.locationName || 'Location pending'}
+                </span>
+                <span className="text-small text-muted" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                  <Clock size={12} /> {new Date(task.createdAt?.seconds * 1000).toLocaleDateString()}
+                </span>
+              </div>
+            </Link>
+          ))}
+        </div>
+      )}
     </div>
   );
 };

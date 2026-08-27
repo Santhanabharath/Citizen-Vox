@@ -5,13 +5,13 @@ import { getStorage } from 'firebase/storage';
 
 // Placeholder configuration using environment variables
 const firebaseConfig = {
-  apiKey: "AIzaSyAN2iOeWDDLmJJvzEe718Cp5mLixLqZC2w",
-  authDomain: "citizenvox-91c1a.firebaseapp.com",
-  projectId: "citizenvox-91c1a",
-  storageBucket: "citizenvox-91c1a.firebasestorage.app",
-  messagingSenderId: "908991488065",
-  appId: "1:908991488065:web:c0b69fe53465db57e2e6c0",
-  measurementId: "G-3NJLF6SCFJ"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
 // Initialize Firebase only if the config is provided (prevents crashing in initial setup phase)

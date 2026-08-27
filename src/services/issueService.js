@@ -12,7 +12,8 @@ import {
   limit,
   onSnapshot,
   updateDoc,
-  arrayUnion
+  arrayUnion,
+  deleteDoc
 } from 'firebase/firestore';
 import { gamificationService } from './gamificationService';
 
@@ -253,6 +254,20 @@ export const issueService = {
       return true;
     } catch (error) {
       console.error("Error verifying resolution:", error);
+      return false;
+    }
+  },
+
+  /**
+   * Delete an issue
+   */
+  deleteIssue: async (issueId) => {
+    if (!db) return false;
+    try {
+      await deleteDoc(doc(db, 'issues', issueId));
+      return true;
+    } catch (error) {
+      console.error("Error deleting issue:", error);
       return false;
     }
   },

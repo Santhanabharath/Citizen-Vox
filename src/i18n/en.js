@@ -55,5 +55,53 @@ export const en = {
   "voice.unsupported": "Voice input isn't supported in this browser.",
   "voice.denied": "Microphone permission is required.",
   "voice.noSpeech": "No speech detected. Please try again.",
-  "voice.limit": "Voice input limit reached."
+  "voice.limit": "Voice input limit reached.",
+
+  "dash.greeting.morning": "Good morning,",
+  "dash.greeting.afternoon": "Good afternoon,",
+  "dash.greeting.evening": "Good evening,",
+  "dash.tagline": "Let's make our city better today.",
+  "dash.reportsCount": "Reports",
+  "dash.impactScore": "Impact",
+  "dash.reportBtn": "Report an Issue",
+  "dash.myIssues": "My Active Issues",
+  "dash.viewAll": "View All",
+  "dash.loading": "Loading...",
+  "dash.noIssues": "No active issues",
+  "dash.noIssuesDesc": "You haven't reported anything recently.",
+  "dash.mapTitle": "CivicPulse Map",
+  "dash.mapDesc": "See verified issues in your neighborhood.",
+  "dash.exploreMap": "Explore Map",
+
+  // Navigation
+  "nav.home": "Home",
+  "nav.map": "Active Issues",
+  "nav.report": "Report",
+  "nav.activity": "Activity",
+  "nav.profile": "Profile",
+
+  // Issue Card
+  "status.reported": "Reported",
+  "status.submitted": "Submitted",
+  "status.under_review": "Under Review",
+  "status.community_verified": "Verified",
+  "status.awaiting_final_verification": "Verifying",
+  "status.closed": "Closed",
+  "severity.low": "Low",
+  "severity.medium": "Medium",
+  "severity.high": "High",
+  "location.unknown": "Location unknown",
+
+  // Profile
+  "profile.title": "Citizen Profile",
+  "profile.level": "Level",
+  "profile.globalRank": "Global Rank",
+  "profile.achievements": "Achievements",
+  "profile.leaderboard": "City Leaderboard",
+  "profile.privacy": "Data & Privacy",
+  "profile.verification": "Community Verification",
+  "profile.verificationDesc": "Allow nearby users to request your endorsement for reported issues.",
+  "profile.radius": "Visibility Radius",
+  "profile.radiusDesc": "How far you want to detect nearby issues.",
+  "profile.anonymized": "Your personal information is always anonymized during public endorsements."
 };

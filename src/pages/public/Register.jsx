@@ -10,9 +10,8 @@ const Register = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   
-  // Backdoor role selection for testing
-  const [role, setRole] = useState('citizen');
-  const [department, setDepartment] = useState('');
+  // Automatic Role Assignment via Invitation Codes
+  const [inviteCode, setInviteCode] = useState('');
   
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -26,6 +25,16 @@ const Register = () => {
     setLoading(true);
     setError(null);
     try {
+      // Parse invite code
+      let role = 'citizen';
+      let department = null;
+      
+      const code = inviteCode.trim().toUpperCase();
+      if (code === 'SUPER-ADMIN-999') role = 'super_admin';
+      else if (code === 'MUNI-ADMIN-555') role = 'municipal_admin';
+      else if (code === 'FIELD-WORK-001') { role = 'field_worker'; department = 'Roads'; }
+      else if (code === 'DEPT-ROADS-101') { role = 'department_officer'; department = 'Roads'; }
+
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       await updateProfile(userCredential.user, { displayName: name });
       
@@ -34,7 +43,7 @@ const Register = () => {
         email: email,
         name: name,
         role: role,
-        department: (role === 'department_officer' || role === 'field_worker') ? department : null,
+        department: department,
         createdAt: serverTimestamp()
       });
 
@@ -96,38 +105,18 @@ const Register = () => {
             />
           </div>
 
-          {/* Test Role Selection */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', marginTop: '1rem', padding: '1rem', background: 'var(--surface-hover)', borderRadius: 'var(--radius-md)' }}>
-            <label className="text-small" style={{ fontWeight: '600' }}>Account Type (Testing Only)</label>
-            <select 
-              value={role} 
-              onChange={e => setRole(e.target.value)}
-              style={{ padding: '0.5rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)' }}
-            >
-              <option value="citizen">Citizen</option>
-              <option value="field_worker">Field Worker</option>
-              <option value="department_officer">Department Officer</option>
-              <option value="municipal_admin">Municipal Admin</option>
-              <option value="super_admin">Super Admin</option>
-            </select>
-            
-            {(role === 'department_officer' || role === 'field_worker') && (
-              <select 
-                value={department} 
-                onChange={e => setDepartment(e.target.value)}
-                style={{ padding: '0.5rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)', marginTop: '0.5rem' }}
-                required
-              >
-                <option value="">Select Department...</option>
-                <option value="Roads">Roads</option>
-                <option value="Sanitation">Sanitation</option>
-                <option value="Water">Water</option>
-                <option value="Drainage">Drainage</option>
-                <option value="Electrical">Electrical</option>
-                <option value="Environment">Environment</option>
-                <option value="Public Safety">Public Safety</option>
-              </select>
-            )}
+          {/* Invitation Code */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', marginTop: '1rem' }}>
+            <div className="flex justify-between">
+              <label className="text-small" style={{ fontWeight: '500' }}>Invitation Code <span style={{ color: 'var(--text-muted)' }}>(Optional)</span></label>
+            </div>
+            <input 
+              type="text" 
+              value={inviteCode}
+              onChange={(e) => setInviteCode(e.target.value)}
+              placeholder="Enter code for official roles" 
+              style={{ padding: '0.75rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)', outline: 'none', background: 'var(--surface-hover)' }} 
+            />
           </div>
           
           <button 

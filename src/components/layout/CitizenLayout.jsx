@@ -1,13 +1,15 @@
 import React from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, PlusCircle, Map, User, Bell, LogOut, MapPin, List } from 'lucide-react';
+import { Home, PlusCircle, Map, User, Bell, LogOut, MapPin, List, Plus, FileText } from 'lucide-react';
 import LanguageSelector from '../i18n/LanguageSelector';
 import { useAuth } from '../../hooks/useAuth';
+import { useLanguage } from '../../hooks/useLanguage';
 import './Layout.css';
 
 const CitizenLayout = () => {
   const location = useLocation();
   const { user, logout } = useAuth();
+  const { t } = useLanguage();
   const navigate = useNavigate();
 
   const handleLogout = async () => {
@@ -20,11 +22,11 @@ const CitizenLayout = () => {
   };
 
   const navItems = [
-    { icon: <MapPin size={20} />, label: 'Map', path: '/citizen' },
-    { icon: <PlusCircle size={24} />, label: 'Report', path: '/citizen/report', primary: true },
-    { icon: <List size={20} />, label: 'My Reports', path: '/citizen/issues' },
+    { icon: <MapPin size={20} />, label: t('nav.map'), path: '/citizen' },
+    { icon: <PlusCircle size={24} />, label: t('nav.report'), path: '/citizen/report', primary: true },
+    { icon: <List size={20} />, label: t('nav.activity'), path: '/citizen/issues' },
     { icon: <Bell size={20} />, label: 'Updates', path: '/citizen/notifications' },
-    { icon: <User size={20} />, label: 'Profile', path: '/citizen/profile' }
+    { icon: <User size={20} />, label: t('nav.profile'), path: '/citizen/profile' }
   ];
 
   const NavItemDesktop = ({ to, icon: Icon, label }) => {
@@ -67,9 +69,9 @@ const CitizenLayout = () => {
 
         {/* Desktop Navigation */}
         <div className="desktop-nav" style={{ display: 'none', gap: '4px', flex: 1, justifyContent: 'center' }}>
-          <NavItemDesktop to="/citizen" icon={MapPin} label="Map" />
-          <NavItemDesktop to="/citizen/report" icon={PlusCircle} label="Report" />
-          <NavItemDesktop to="/citizen/issues" icon={List} label="My Reports" />
+          <NavItemDesktop to="/citizen" icon={MapPin} label={t('nav.map')} />
+          <NavItemDesktop to="/citizen/report" icon={PlusCircle} label={t('nav.report')} />
+          <NavItemDesktop to="/citizen/issues" icon={List} label={t('nav.activity')} />
         </div>
 
         <div className="header-actions" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -80,36 +82,41 @@ const CitizenLayout = () => {
         </div>
       </header>
 
-      <main className="app-main citizen-main container">
+      <main 
+        className={`app-main citizen-main ${location.pathname === '/citizen/map' ? '' : 'container'}`}
+        style={location.pathname === '/citizen/map' ? { padding: 0, height: 'calc(100vh - 64px)' } : {}}
+      >
         <Outlet />
       </main>
 
       {/* Mobile bottom navigation */}
-      <nav className="mobile-nav">
-        <Link to="/citizen" className={`mobile-nav-item ${location.pathname === '/citizen' ? 'active' : ''}`}>
-          <Home size={24} />
-          <span className="nav-label">Home</span>
-        </Link>
-        <Link to="/citizen/map" className={`mobile-nav-item ${location.pathname === '/citizen/map' ? 'active' : ''}`}>
-          <Map size={24} />
-          <span className="nav-label">Map</span>
-        </Link>
-        
-        <Link to="/citizen/report" className="mobile-nav-item primary-item">
-          <Plus size={32} strokeWidth={2.5} />
-          <span className="nav-label">Report</span>
-        </Link>
-        
-        <Link to="/citizen/issues" className={`mobile-nav-item ${location.pathname === '/citizen/issues' ? 'active' : ''}`}>
-          <FileText size={24} />
-          <span className="nav-label">Activity</span>
-        </Link>
-        
-        <Link to="/citizen/profile" className={`mobile-nav-item ${location.pathname === '/citizen/profile' ? 'active' : ''}`}>
-          <User size={24} />
-          <span className="nav-label">Profile</span>
-        </Link>
-      </nav>
+      {location.pathname !== '/citizen/report' && (
+        <nav className="mobile-nav">
+          <Link to="/citizen" className={`mobile-nav-item ${location.pathname === '/citizen' ? 'active' : ''}`}>
+            <Home size={24} />
+            <span className="nav-label">{t('nav.home')}</span>
+          </Link>
+          <Link to="/citizen/map" className={`mobile-nav-item ${location.pathname === '/citizen/map' ? 'active' : ''}`}>
+            <Map size={24} />
+            <span className="nav-label">{t('nav.map')}</span>
+          </Link>
+          
+          <Link to="/citizen/report" className="mobile-nav-item primary-item">
+            <Plus size={32} strokeWidth={2.5} />
+            <span className="nav-label">{t('nav.report')}</span>
+          </Link>
+          
+          <Link to="/citizen/issues" className={`mobile-nav-item ${location.pathname === '/citizen/issues' ? 'active' : ''}`}>
+            <FileText size={24} />
+            <span className="nav-label">{t('nav.activity')}</span>
+          </Link>
+          
+          <Link to="/citizen/profile" className={`mobile-nav-item ${location.pathname === '/citizen/profile' ? 'active' : ''}`}>
+            <User size={24} />
+            <span className="nav-label">{t('nav.profile')}</span>
+          </Link>
+        </nav>
+      )}
 
       <style>{`
         @media (min-width: 769px) {

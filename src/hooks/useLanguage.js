@@ -1,36 +1,12 @@
-import { useState, useEffect, useCallback } from 'react';
-import { SUPPORTED_LANGUAGES } from '../i18n';
+import { useContext } from 'react';
+import { LanguageContext } from '../contexts/LanguageContext';
 
 export const useLanguage = () => {
-  const [langCode, setLangCode] = useState('en');
-
-  // Load from local storage on mount
-  useEffect(() => {
-    const savedLang = localStorage.getItem('civicpulse_lang');
-    if (savedLang && SUPPORTED_LANGUAGES[savedLang]) {
-      setLangCode(savedLang);
-    }
-  }, []);
-
-  const setLanguage = (code) => {
-    if (SUPPORTED_LANGUAGES[code]) {
-      setLangCode(code);
-      localStorage.setItem('civicpulse_lang', code);
-    }
-  };
-
-  const t = useCallback((key) => {
-    const dict = SUPPORTED_LANGUAGES[langCode]?.translations;
-    // Fallback to English if translation is missing
-    const fallbackDict = SUPPORTED_LANGUAGES['en']?.translations;
-    
-    return dict?.[key] || fallbackDict?.[key] || key;
-  }, [langCode]);
-
-  return {
-    langCode,
-    languageConfig: SUPPORTED_LANGUAGES[langCode],
-    setLanguage,
-    t
-  };
+  const context = useContext(LanguageContext);
+  
+  if (context === undefined) {
+    throw new Error('useLanguage must be used within a LanguageProvider');
+  }
+  
+  return context;
 };

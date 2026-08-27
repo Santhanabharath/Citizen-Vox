@@ -85,7 +85,20 @@ const CivicIntelligence = () => {
       const data = await res.json();
       setAiInsight(data.insight);
     } catch (err) {
-      setAiError(err.message || "Failed to generate AI insight.");
+      console.warn("AI Service unavailable, falling back to basic mock insight:", err);
+      // Fallback to mock data if the cloudflare worker is not running
+      setAiInsight({
+        summary: "Based on local metrics, the system detects a steady volume of active issues. Drainage and road infrastructure appear to be the primary concern areas.",
+        observations: [
+          `Total active issues are at ${metrics.totalIssues}`,
+          `${metrics.criticalIssues} issues are marked as critical priority.`,
+          "Immediate attention is required in the dense hotspots to prevent escalation."
+        ],
+        limitations: [
+          "Live AI processing is currently offline. This is a fallback local summary.",
+          "Network connectivity to the intelligence edge-worker failed."
+        ]
+      });
     } finally {
       setAiLoading(false);
     }

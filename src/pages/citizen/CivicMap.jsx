@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Filter, Plus } from 'lucide-react';
+import { Filter, Plus, ArrowLeft } from 'lucide-react';
 import { issueService } from '../../services/issueService';
 import { useMapIssues } from '../../hooks/useMapIssues';
 import { useMapFilters } from '../../hooks/useMapFilters';
@@ -25,6 +25,13 @@ const CivicMap = () => {
 
   // Responsive state
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
+
+  // Request location on mount
+  useEffect(() => {
+    if (!userLocation && !isLocating) {
+      requestLocation();
+    }
+  }, []);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 1024);
@@ -82,6 +89,16 @@ const CivicMap = () => {
         {/* Floating UI */}
         <MapSearch onSearch={(val) => updateFilter('searchQuery', val)} />
         
+        {/* Back Button (Floating) */}
+        <button 
+          className="map-fab"
+          style={{ position: 'absolute', top: '5rem', left: '1rem', zIndex: 1000 }}
+          onClick={() => navigate('/citizen')}
+          title="Back to Dashboard"
+        >
+          <ArrowLeft size={20} color="var(--text-primary)" />
+        </button>
+
         {/* Filter Trigger (Floating Button) */}
         <button 
           className="map-fab"
@@ -102,13 +119,7 @@ const CivicMap = () => {
 
         <MapSummary issues={filteredIssues} />
 
-        {/* Floating Action Button: Report Issue */}
-        <div style={{ position: 'absolute', bottom: isMobile ? '5rem' : '2rem', left: '50%', transform: 'translateX(-50%)', zIndex: 1000 }}>
-          <button className="map-fab primary" onClick={handleReportClick}>
-            <Plus size={20} />
-            Report Issue
-          </button>
-        </div>
+
       </div>
 
       {/* Mobile Bottom Sheet: List on bottom */}

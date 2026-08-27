@@ -23,24 +23,23 @@ const CivicMapView = ({
   activeIssueId,
   onIssueClick 
 }) => {
-  const [mapCenter, setMapCenter] = useState([37.7749, -122.4194]);
+  const [mapCenter, setMapCenter] = useState(
+    userLocation ? [userLocation.lat, userLocation.lng] : 
+    (issues.length > 0 ? [issues[0].latitude, issues[0].longitude] : [20.5937, 78.9629])
+  );
   const mapRef = useRef(null);
 
   useEffect(() => {
     // If we have user location, center map on it once
-    if (userLocation) {
+    if (userLocation && mapRef.current) {
       setMapCenter([userLocation.lat, userLocation.lng]);
-      if (mapRef.current) {
-        mapRef.current.flyTo([userLocation.lat, userLocation.lng], 14, { duration: 1.5 });
-      }
-    } else if (issues.length > 0) {
+      mapRef.current.setView([userLocation.lat, userLocation.lng], 14, { animate: true });
+    } else if (issues.length > 0 && mapRef.current) {
       // Fallback: center on first issue
       setMapCenter([issues[0].latitude, issues[0].longitude]);
-      if (mapRef.current) {
-        mapRef.current.setView([issues[0].latitude, issues[0].longitude], 12);
-      }
+      mapRef.current.setView([issues[0].latitude, issues[0].longitude], 12, { animate: true });
     }
-  }, [userLocation, issues.length]); // Intentionally not depending on full issues array to prevent jumpiness
+  }, [userLocation?.lat, userLocation?.lng, issues.length]); // more specific dependencies
 
   // Effect to fly to marker when clicked from list
   useEffect(() => {
@@ -64,8 +63,8 @@ const CivicMapView = ({
         ref={mapRef}
       >
         <TileLayer
-          url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         />
         
         {/* Render Issues with Geographic Clustering */}

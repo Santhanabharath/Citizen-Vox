@@ -1,6 +1,8 @@
 import { db } from '../firebase/config';
 import { collection, addDoc, updateDoc, doc, serverTimestamp, increment, query, where, getDocs } from 'firebase/firestore';
 
+import { gamificationService } from './gamificationService';
+
 const WORKER_URL = 'http://127.0.0.1:8787/api/community/recalculate';
 
 export const confirmationService = {
@@ -35,7 +37,11 @@ export const confirmationService = {
         updatedAt: serverTimestamp()
       });
 
-      // 4. Trigger backend to recalculate confidence score
+      // 4. Award Gamification XP for verifying
+      await gamificationService.addXp(userId, 20);
+      await gamificationService.awardBadge(userId, 2); // Assuming 2 is "Truth Seeker" badge
+
+      // 5. Trigger backend to recalculate confidence score
       if (token) {
         fetch(WORKER_URL, {
           method: 'POST',

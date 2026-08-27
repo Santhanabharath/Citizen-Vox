@@ -16,7 +16,7 @@ const MapControls = ({ onLocateMe }) => {
   };
 
   return (
-    <div className="map-fab-bottom-right" style={{ bottom: '5rem' }}> {/* Adjusted to sit above the report button */}
+    <div className="map-fab-bottom-right" style={{ bottom: '160px' }}> {/* Adjusted to sit above the report button & nav */}
       <button className="map-fab" onClick={onLocateMe} title="Locate Me" aria-label="Locate Me">
         <Navigation size={20} />
       </button>

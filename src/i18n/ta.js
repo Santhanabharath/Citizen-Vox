@@ -55,5 +55,53 @@ export const ta = {
   "voice.unsupported": "உங்கள் உலாவியில் குரல் உள்ளீடு ஆதரிக்கப்படவில்லை.",
   "voice.denied": "மைக்ரோஃபோன் அனுமதி தேவை.",
   "voice.noSpeech": "குரல் கேட்கவில்லை. மீண்டும் முயற்சிக்கவும்.",
-  "voice.limit": "குரல் உள்ளீடு வரம்பை எட்டியது."
+  "voice.limit": "குரல் உள்ளீடு வரம்பை எட்டியது.",
+
+  "dash.greeting.morning": "காலை வணக்கம்,",
+  "dash.greeting.afternoon": "மதிய வணக்கம்,",
+  "dash.greeting.evening": "மாலை வணக்கம்,",
+  "dash.tagline": "இன்று நம் நகரத்தை சிறந்ததாக்குவோம்.",
+  "dash.reportsCount": "புகார்கள்",
+  "dash.impactScore": "தாக்கம்",
+  "dash.reportBtn": "பிரச்சினையை புகாரளிக்கவும்",
+  "dash.myIssues": "என் பிரச்சினைகள்",
+  "dash.viewAll": "அனைத்தையும் காண்க",
+  "dash.loading": "ஏற்றுகிறது...",
+  "dash.noIssues": "செயலில் உள்ள பிரச்சினைகள் இல்லை",
+  "dash.noIssuesDesc": "நீங்கள் சமீபத்தில் எதையும் புகாரளிக்கவில்லை.",
+  "dash.mapTitle": "CivicPulse வரைபடம்",
+  "dash.mapDesc": "உங்கள் அருகிலுள்ள சரிபார்க்கப்பட்ட பிரச்சினைகளை பார்க்கவும்.",
+  "dash.exploreMap": "வரைபடத்தை ஆராயுங்கள்",
+
+  // Navigation
+  "nav.home": "முகப்பு",
+  "nav.map": "வரைபடம்",
+  "nav.report": "புகாரளி",
+  "nav.activity": "பதிவுகள்",
+  "nav.profile": "கணக்கு",
+
+  // Issue Card
+  "status.reported": "புகாரளிக்கப்பட்டது",
+  "status.submitted": "சமர்ப்பிக்கப்பட்டது",
+  "status.under_review": "பரிசீலனையில்",
+  "status.community_verified": "சரிபார்க்கப்பட்டது",
+  "status.awaiting_final_verification": "இறுதி சரிபார்ப்பில்",
+  "status.closed": "மூடப்பட்டது",
+  "severity.low": "குறைவு",
+  "severity.medium": "நடுத்தரம்",
+  "severity.high": "அதிகம்",
+  "location.unknown": "இடம் தெரியவில்லை",
+
+  // Profile
+  "profile.title": "குடிமகன் சுயவிவரம்",
+  "profile.level": "நிலை",
+  "profile.globalRank": "உலகளாவிய தரவரிசை",
+  "profile.achievements": "சாதனைகள்",
+  "profile.leaderboard": "நகர தரவரிசை",
+  "profile.privacy": "தரவு & தனியுரிமை",
+  "profile.verification": "சமூக சரிபார்ப்பு",
+  "profile.verificationDesc": "பதிவு செய்யப்பட்ட பிரச்சினைகளுக்கு உங்கள் ஒப்புதலைக் கோர அருகில் உள்ள பயனர்களை அனுமதிக்கவும்.",
+  "profile.radius": "பார்வை ஆரம்",
+  "profile.radiusDesc": "அருகிலுள்ள பிரச்சினைகளை எவ்வளவு தூரம் கண்டறிய விரும்புகிறீர்கள்.",
+  "profile.anonymized": "பொது ஒப்புதல்களின் போது உங்கள் தனிப்பட்ட தகவல்கள் எப்போதும் அநாமதேயமாக வைக்கப்படும்."
 };

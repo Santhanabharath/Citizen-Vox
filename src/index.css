@@ -145,3 +145,22 @@ body {
 .text-body { font-size: 0.9375rem; }
 .text-small { font-size: 0.8125rem; color: var(--text-secondary); }
 .text-muted { color: var(--text-muted); }
+
+/* Bottom Action Bar for forms */
+.bottom-action-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  padding: 16px 24px 32px;
+  background: var(--off-white);
+  border-top: 1px solid var(--border-light);
+  bottom: calc(72px + env(safe-area-inset-bottom));
+  z-index: 30;
+}
+
+@media (min-width: 769px) {
+  .bottom-action-bar {
+    bottom: 0;
+    padding-bottom: 24px;
+  }
+}

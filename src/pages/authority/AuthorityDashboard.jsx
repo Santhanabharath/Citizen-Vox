@@ -6,23 +6,74 @@ import Button from '../../components/common/Button';
 
 const AuthorityDashboard = () => {
   const [metrics, setMetrics] = useState({
-    active: 1248,
-    activeChange: 12,
-    critical: 156,
-    criticalChange: 8,
-    resolved: 892,
-    resolvedChange: 18,
-    verified: 3400,
-    verifiedChange: 15
+    active: 0,
+    activeChange: 0,
+    critical: 0,
+    criticalChange: 0,
+    resolved: 0,
+    resolvedChange: 0,
+    verified: 0,
+    verifiedChange: 0
   });
 
-  const [queue, setQueue] = useState([
-    { id: '1', priority: 'Critical', title: 'Pothole near College Gate', location: 'College Road', confidence: 92, status: 'Assigned' },
-    { id: '2', priority: 'High', title: 'Garbage Overflow', location: 'Main Market', confidence: 88, status: 'In Progress' },
-    { id: '3', priority: 'High', title: 'Water Leakage', location: 'Anna Nagar', confidence: 85, status: 'Assigned' },
-    { id: '4', priority: 'Medium', title: 'Street Light Not Working', location: 'Park Road', confidence: 78, status: 'Submitted' },
-    { id: '5', priority: 'Medium', title: 'Drain Blockage', location: 'North Street', confidence: 76, status: 'Under Review' },
-  ]);
+  const [queue, setQueue] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const unsubscribe = issueService.subscribeToAllIssues((liveIssues) => {
+      // Calculate Metrics
+      const activeCount = liveIssues.filter(i => i.status === 'submitted' || i.status === 'in_progress').length;
+      const resolvedCount = liveIssues.filter(i => i.status === 'resolved').length;
+      
+      // Calculate Priority (basic MVP threshold logic: if AI confidence > 80 it's High, if category is drainage/water and confidence > 90 it's Critical)
+      let criticalCount = 0;
+      
+      const enrichedQueue = liveIssues.slice(0, 10).map(issue => {
+        let priority = 'Medium';
+        const conf = issue.confidenceScore || Math.floor(Math.random() * 30 + 50); // mock conf if missing
+        
+        if (conf > 80) priority = 'High';
+        if (conf > 90 && (issue.category === 'drainage' || issue.category === 'road_damage')) {
+          priority = 'Critical';
+        }
+
+        if (priority === 'Critical' && issue.status !== 'resolved') {
+          criticalCount++;
+        }
+
+        return {
+          id: issue.id,
+          priority,
+          title: issue.title || issue.category || 'New Issue',
+          location: issue.address || issue.location?.address || (issue.latitude ? `${issue.latitude.toFixed(4)}, ${issue.longitude.toFixed(4)}` : 'Unknown Location'),
+          confidence: conf,
+          status: issue.status === 'submitted' ? 'New' : issue.status
+        };
+      });
+
+      setMetrics({
+        active: activeCount,
+        activeChange: 12, // Still mock change % since we need historical time-series data for this
+        critical: criticalCount,
+        criticalChange: 8,
+        resolved: resolvedCount,
+        resolvedChange: 18,
+        verified: liveIssues.reduce((acc, curr) => acc + (curr.verificationCount || 0), 0),
+        verifiedChange: 15
+      });
+
+      // Sort queue to put Critical at top
+      enrichedQueue.sort((a, b) => {
+        const pScore = { 'Critical': 3, 'High': 2, 'Medium': 1 };
+        return pScore[b.priority] - pScore[a.priority];
+      });
+
+      setQueue(enrichedQueue);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   return (
     <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -81,36 +132,57 @@ const AuthorityDashboard = () => {
           </div>
 
           <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
-              <thead>
-                <tr style={{ color: 'var(--text-secondary)', borderBottom: '1px solid var(--border-light)' }}>
-                  <th style={{ padding: '12px 0', fontWeight: 600 }}>Priority</th>
-                  <th style={{ fontWeight: 600 }}>Issue</th>
-                  <th style={{ fontWeight: 600 }}>Location</th>
-                  <th style={{ fontWeight: 600 }}>Confidence</th>
-                  <th style={{ fontWeight: 600 }}>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {queue.map(item => (
-                  <tr key={item.id} style={{ borderBottom: '1px solid var(--border-light)' }}>
-                    <td style={{ padding: '16px 0' }}>
-                      <span style={{ 
-                        background: item.priority === 'Critical' ? 'var(--danger-soft)' : item.priority === 'High' ? 'var(--warning-light)' : 'var(--surface-soft)', 
-                        color: item.priority === 'Critical' ? 'var(--danger-dark)' : item.priority === 'High' ? 'var(--warning-dark)' : 'var(--warning-dark)', 
-                        padding: '4px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600 
-                      }}>
-                        {item.priority}
-                      </span>
-                    </td>
-                    <td style={{ fontWeight: 600 }}>{item.title}</td>
-                    <td style={{ color: 'var(--text-secondary)' }}>{item.location}</td>
-                    <td style={{ fontWeight: 600 }}>{item.confidence}%</td>
-                    <td style={{ color: 'var(--text-secondary)' }}>{item.status}</td>
+            {loading ? (
+              <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>Loading live data...</div>
+            ) : queue.length === 0 ? (
+              <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>No issues reported yet.</div>
+            ) : (
+              <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
+                <thead>
+                  <tr style={{ color: 'var(--text-secondary)', borderBottom: '1px solid var(--border-light)' }}>
+                    <th style={{ padding: '12px 0', fontWeight: 600 }}>Priority</th>
+                    <th style={{ fontWeight: 600 }}>Issue</th>
+                    <th style={{ fontWeight: 600 }}>Location</th>
+                    <th style={{ fontWeight: 600 }}>Confidence</th>
+                    <th style={{ fontWeight: 600 }}>Status</th>
+                    <th style={{ fontWeight: 600, textAlign: 'right' }}>Action</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {queue.map(item => (
+                    <tr key={item.id} style={{ borderBottom: '1px solid var(--border-light)' }}>
+                      <td style={{ padding: '16px 0' }}>
+                        <span style={{ 
+                          background: item.priority === 'Critical' ? 'var(--danger-soft)' : item.priority === 'High' ? 'var(--warning-light)' : 'var(--surface-soft)', 
+                          color: item.priority === 'Critical' ? 'var(--danger-dark)' : item.priority === 'High' ? 'var(--warning-dark)' : 'var(--warning-dark)', 
+                          padding: '4px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600 
+                        }}>
+                          {item.priority}
+                        </span>
+                      </td>
+                      <td style={{ fontWeight: 600, textTransform: 'capitalize' }}>{item.title.replace('_', ' ')}</td>
+                      <td style={{ color: 'var(--text-secondary)' }}>
+                        <div style={{ maxWidth: '150px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {item.location}
+                        </div>
+                      </td>
+                      <td style={{ fontWeight: 600 }}>{item.confidence}%</td>
+                      <td style={{ color: 'var(--text-secondary)', textTransform: 'capitalize' }}>{item.status.replace(/_/g, ' ')}</td>
+                      <td style={{ textAlign: 'right' }}>
+                        {(item.status === 'in progress' || item.status === 'New' || item.status === 'community verified') && (
+                           <button 
+                             onClick={() => issueService.updateIssueStatus(item.id, 'awaiting_final_verification')}
+                             style={{ background: 'var(--primary-green)', color: 'var(--near-black)', border: 'none', padding: '4px 12px', borderRadius: '16px', fontWeight: 600, fontSize: '0.75rem', cursor: 'pointer' }}
+                           >
+                             Resolve
+                           </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
         </div>
 

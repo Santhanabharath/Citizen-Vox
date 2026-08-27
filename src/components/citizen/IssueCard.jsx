@@ -1,11 +1,23 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { MapPin, ArrowRight } from 'lucide-react';
+import { ArrowRight, CheckCircle, XCircle } from 'lucide-react';
+import { useAuth } from '../../hooks/useAuth';
+import { useLanguage } from '../../hooks/useLanguage';
+import { issueService } from '../../services/issueService';
 
 const IssueCard = ({ issue, showConfidence = false }) => {
-  // Use mock or real priority
+  const { user } = useAuth();
+  const { t } = useLanguage();
   const priority = issue.priority?.level || 'Medium';
   const confidence = issue.confidenceScore || 0;
+  
+  const handleVerify = async (e, isVerified) => {
+    e.preventDefault(); // prevent navigation
+    const success = await issueService.verifyResolution(issue.id, isVerified);
+    if (success) {
+      alert(isVerified ? "Thank you for verifying! Issue Closed." : "Notified authorities. Issue escalated.");
+    }
+  };
   
   const getPriorityStyle = (level) => {
     switch(level?.toLowerCase()) {
@@ -33,7 +45,10 @@ const IssueCard = ({ issue, showConfidence = false }) => {
                 {issue.title || 'Civic Issue'}
               </h4>
               <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                <MapPin size={12} /> {issue.location?.address || 'Location unknown'}
+                <span style={{ fontSize: '0.875rem' }}>📍</span> 
+                {issue.location?.lat && issue.location?.lng 
+                  ? `${issue.location.lat.toFixed(5)}, ${issue.location.lng.toFixed(5)}` 
+                  : issue.location?.address || t('location.unknown')}
               </div>
             </div>
           </div>
@@ -42,10 +57,10 @@ const IssueCard = ({ issue, showConfidence = false }) => {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '4px', paddingTop: '12px', borderTop: '1px solid var(--border-light)' }}>
           <div style={{ display: 'flex', gap: '8px' }}>
             <span style={{ background: pStyle.bg, color: pStyle.color, border: `1px solid ${pStyle.border}`, padding: '4px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600 }}>
-              {priority}
+              {t(`severity.${priority.toLowerCase()}`) !== `severity.${priority.toLowerCase()}` ? t(`severity.${priority.toLowerCase()}`) : priority}
             </span>
             <span style={{ background: 'var(--surface-soft)', color: 'var(--text-secondary)', padding: '4px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 500 }}>
-              {issue.status || 'Reported'}
+              {t(`status.${(issue.status || 'reported').toLowerCase()}`) !== `status.${(issue.status || 'reported').toLowerCase()}` ? t(`status.${(issue.status || 'reported').toLowerCase()}`) : (issue.status || 'Reported')}
             </span>
           </div>
 
@@ -53,6 +68,27 @@ const IssueCard = ({ issue, showConfidence = false }) => {
              <ArrowRight size={16} />
           </div>
         </div>
+
+        {/* Post-Resolution Verification Prompt */}
+        {issue.status === 'awaiting_final_verification' && user && issue.reportedBy === user.uid && (
+          <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1', marginTop: '8px' }} onClick={(e) => e.preventDefault()}>
+            <p style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--near-black)', margin: '0 0 8px 0' }}>Authorities marked this as resolved. Is it fixed?</p>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button 
+                onClick={(e) => handleVerify(e, true)}
+                style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', background: 'var(--primary-green)', color: 'var(--near-black)', border: 'none', padding: '8px', borderRadius: '6px', fontWeight: 600, fontSize: '0.75rem', cursor: 'pointer' }}
+              >
+                <CheckCircle size={14} /> Yes, Fixed
+              </button>
+              <button 
+                onClick={(e) => handleVerify(e, false)}
+                style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', background: '#fee2e2', color: '#b91c1c', border: 'none', padding: '8px', borderRadius: '6px', fontWeight: 600, fontSize: '0.75rem', cursor: 'pointer' }}
+              >
+                <XCircle size={14} /> No, Persists
+              </button>
+            </div>
+          </div>
+        )}
 
       </div>
     </Link>

@@ -17,6 +17,7 @@ import ReportIssue from './pages/citizen/ReportIssue';
 import MyIssues from './pages/citizen/MyIssues';
 import IssueDetails from './pages/citizen/IssueDetails';
 import CivicMap from './pages/citizen/CivicMap';
+import CitizenProfile from './pages/citizen/CitizenProfile';
 import AuthorityDashboard from './pages/authority/AuthorityDashboard';
 
 import AdminDashboard from './pages/admin/AdminDashboard';
@@ -48,6 +49,7 @@ function App() {
           <Route path="issues" element={<MyIssues />} />
           <Route path="issues/:id" element={<IssueDetails />} />
           <Route path="map" element={<CivicMap />} />
+          <Route path="profile" element={<CitizenProfile />} />
         </Route>
 
         {/* Authority Routes */}

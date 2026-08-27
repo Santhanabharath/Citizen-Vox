@@ -9,6 +9,7 @@ const WorkerDashboard = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [tasks, setTasks] = useState([]);
+  const [completedCount, setCompletedCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -18,8 +19,12 @@ const WorkerDashboard = () => {
   const fetchTasks = async () => {
     if (!user) return;
     try {
-      const activeTasks = await taskService.getWorkerTasks(user.uid);
+      const allTasks = await taskService.getWorkerTasks(user.uid);
+      const activeTasks = allTasks.filter(t => t.currentStatus !== 'Awaiting Verification' && t.currentStatus !== 'Verified Resolved');
+      const completedTasks = allTasks.filter(t => t.currentStatus === 'Awaiting Verification' || t.currentStatus === 'Verified Resolved');
+      
       setTasks(activeTasks.slice(0, 3));
+      setCompletedCount(completedTasks.length);
     } catch (e) {
       console.error(e);
     } finally {
@@ -42,7 +47,7 @@ const WorkerDashboard = () => {
           </div>
           <div style={{ flex: 1, background: 'rgba(255,255,255,0.05)', padding: '16px', borderRadius: '16px', border: '1px solid var(--border-dark)' }}>
             <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 600 }}>Completed</div>
-            <div style={{ fontSize: '1.5rem', fontWeight: 800, marginTop: '4px', color: 'var(--success)' }}>12</div>
+            <div style={{ fontSize: '1.5rem', fontWeight: 800, marginTop: '4px', color: 'var(--success)' }}>{completedCount}</div>
           </div>
         </div>
       </div>

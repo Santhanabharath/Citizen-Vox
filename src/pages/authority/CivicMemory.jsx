@@ -1,112 +1,109 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { db } from '../../firebase/config';
-import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
-import { Archive, MapPin, Activity, ShieldAlert, ArrowUpRight } from 'lucide-react';
+import { collection, query, orderBy, getDocs, limit } from 'firebase/firestore';
+import { Database, AlertTriangle, Filter, Archive } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const CivicMemory = () => {
   const { user } = useAuth();
-  const [history, setHistory] = useState([]);
+  const [clusters, setClusters] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState('');
 
   useEffect(() => {
-    const fetchMemory = async () => {
+    const fetchClusters = async () => {
+      setLoading(true);
       try {
-        if (!user) return;
-        let q = collection(db, 'issueClusters');
-        let queryConstraints = [orderBy('createdAt', 'desc'), limit(100)];
-
-        // Enforce data scoping
-        if (user.role === 'municipal_admin' && user.municipalityId) {
-          queryConstraints.push(where('municipalityId', '==', user.municipalityId));
-        } else if (user.role === 'department_officer' && user.departmentId) {
-          queryConstraints.push(where('departmentId', '==', user.departmentId));
-        }
-
-        const snapshot = await getDocs(query(q, ...queryConstraints));
+        const q = query(
+          collection(db, 'issueClusters'),
+          orderBy('updatedAt', 'desc'),
+          limit(100)
+        );
+        const snap = await getDocs(q);
+        const data = [];
+        snap.forEach(doc => data.push({ id: doc.id, ...doc.data() }));
         
-        // We look for resolved or historical issues for Civic Memory
-        const fetchedHistory = [];
-        snapshot.forEach(doc => {
-          const data = doc.data();
-          if (data.currentStatus === 'Resolved' || data.currentStatus === 'closed' || data.reportCount > 3) {
-            fetchedHistory.push({ id: doc.id, ...data });
-          }
+        // Sort by memory score descending (calculated in memory for now)
+        data.sort((a, b) => {
+           const aScore = (a.reportCount || 1) + (a.issueIds?.length || 1);
+           const bScore = (b.reportCount || 1) + (b.issueIds?.length || 1);
+           return bScore - aScore;
         });
-        
-        setHistory(fetchedHistory);
+
+        setClusters(data);
       } catch (err) {
-        console.error("Failed to load civic memory:", err);
+        console.error("Failed to load clusters:", err);
       } finally {
         setLoading(false);
       }
     };
-
-    fetchMemory();
+    
+    if (user) fetchClusters();
   }, [user]);
 
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-full">
-        <div className="spinner" style={{ width: '40px', height: '40px', border: '3px solid var(--border)', borderTopColor: 'var(--accent)', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
-      </div>
-    );
-  }
+  const filteredClusters = clusters.filter(c => {
+    if (!filter) return true;
+    return c.category === filter;
+  });
 
   return (
     <div style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto' }}>
       <header style={{ marginBottom: '2rem' }}>
-        <h1 className="text-h1">Civic Memory</h1>
-        <p className="text-muted">Historical data and resolution durability tracking.</p>
+        <h1 className="text-h1" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <Database /> Civic Memory
+        </h1>
+        <p className="text-muted">Long-term tracking of clustered issues and community consensus.</p>
       </header>
 
-      {history.length === 0 ? (
+      <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem', background: 'var(--surface)', padding: '1rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)', alignItems: 'center' }}>
+        <Filter size={20} color="var(--text-muted)" />
+        <select value={filter} onChange={e => setFilter(e.target.value)} style={{ padding: '0.5rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)' }}>
+          <option value="">All Categories</option>
+          <option value="road_damage">Road Damage</option>
+          <option value="garbage">Garbage</option>
+          <option value="water_leakage">Water Leakage</option>
+        </select>
+      </div>
+
+      {loading ? (
+         <div style={{ textAlign: 'center', padding: '3rem' }}>Loading Civic Memory...</div>
+      ) : filteredClusters.length === 0 ? (
         <div style={{ padding: '4rem 2rem', textAlign: 'center', background: 'var(--surface)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)' }}>
           <Archive size={48} color="var(--text-muted)" style={{ margin: '0 auto 1rem' }} />
-          <h3 className="text-h3">No Historical Data</h3>
-          <p className="text-muted" style={{ marginTop: '0.5rem' }}>Insufficient data to calculate historical metrics or resolution durability.</p>
+          <h3 className="text-h3">No Clustered Memory</h3>
+          <p className="text-muted" style={{ marginTop: '0.5rem' }}>No historical issue clusters formed yet.</p>
         </div>
       ) : (
-        <div style={{ display: 'grid', gap: '1.5rem' }}>
-          {history.map((record) => {
-            // Fake calculation of durability for demo purposes, based on real data fields
-            const durability = record.reportCount > 5 ? 'LOW' : record.reportCount > 2 ? 'MEDIUM' : 'HIGH';
-            const durabilityColor = durability === 'LOW' ? 'var(--danger)' : durability === 'MEDIUM' ? 'var(--warning)' : 'var(--success)';
-
+        <div style={{ display: 'grid', gap: '1.5rem', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))' }}>
+          {filteredClusters.map(cluster => {
+            const memoryScore = (cluster.reportCount || 1) * 15; // Simple formula
+            
             return (
-              <div key={record.id} style={{ background: 'var(--surface)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)', padding: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                
-                <div style={{ flex: 1 }}>
-                  <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginBottom: '0.5rem' }}>
-                    <span className="text-small text-muted" style={{ textTransform: 'uppercase' }}>{record.category?.replace('_', ' ')}</span>
-                    <span className="text-small text-muted" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                      <Activity size={14} /> Status: {record.currentStatus}
+              <div key={cluster.id} style={{ background: 'var(--surface)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <div>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', color: 'var(--text-secondary)', background: 'var(--surface-hover)', padding: '4px 8px', borderRadius: '4px' }}>
+                      {cluster.category?.replace('_', ' ')}
                     </span>
+                    <h3 className="text-h3" style={{ marginTop: '0.5rem' }}>{cluster.title || 'Civic Issue Cluster'}</h3>
                   </div>
-                  
-                  <h3 className="text-h3" style={{ marginBottom: '0.5rem' }}>{record.title}</h3>
-                  
-                  <div style={{ display: 'flex', gap: '1.5rem' }}>
-                    <span className="text-small text-muted" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                      <MapPin size={14} /> {record.locationName || 'Unknown location'}
-                    </span>
-                    <span className="text-small text-muted" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                      <Archive size={14} /> Total Reports: {record.reportCount || 1}
-                    </span>
-                    <span className="text-small text-muted" style={{ color: durabilityColor, fontWeight: '600', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                      <ShieldAlert size={14} /> Resolution Durability: {durability}
-                    </span>
+                  <div style={{ textAlign: 'center', background: 'var(--bg-main)', padding: '0.5rem', borderRadius: '8px', border: '1px solid var(--border)', minWidth: '60px' }}>
+                    <div style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--primary-green)' }}>{memoryScore}</div>
+                    <div style={{ fontSize: '0.65rem', textTransform: 'uppercase', color: 'var(--text-muted)' }}>Score</div>
                   </div>
                 </div>
-
-                <div>
-                  <Link 
-                    to={user.role === 'department_officer' ? `/department/issues/${record.id}` : `/authority/issues/${record.id}`}
-                    style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 1.5rem', border: '1px solid var(--border)', color: 'var(--text-primary)', borderRadius: 'var(--radius-md)', textDecoration: 'none', fontWeight: '500' }}
-                  >
-                    View Details <ArrowUpRight size={16} />
-                  </Link>
+                
+                <p className="text-small text-muted" style={{ display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                  {cluster.description}
+                </p>
+                
+                <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid var(--border)', paddingTop: '1rem', marginTop: 'auto' }}>
+                  <div style={{ display: 'flex', gap: '1rem' }}>
+                    <span className="text-small" style={{ fontWeight: 600 }}>{cluster.reportCount || 1} Reports</span>
+                    <span className="text-small" style={{ color: 'var(--text-muted)' }}>{cluster.currentStatus || 'Open'}</span>
+                  </div>
+                  <Link to={`/admin/issues/${cluster.id}`} className="text-small" style={{ color: 'var(--primary-green)', fontWeight: 600, textDecoration: 'none' }}>View Details</Link>
                 </div>
               </div>
             );

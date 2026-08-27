@@ -3,32 +3,20 @@ import { collection, doc, updateDoc, serverTimestamp, getDocs, query, where, ord
 
 export const taskService = {
   /**
-   * Fetches tasks assigned to a specific worker
+   * Fetches tasks assigned to a specific worker from the new tasks collection
    */
   getWorkerTasks: async (workerId) => {
     try {
-      // For MVP, we'll query issueClusters where assignedOfficer == worker's name
-      // In a real app we'd use officerId, but we used names in the dummy assignment dropdown
-      // Actually, we need to map officerId from the user profile, but let's query the assignments table OR issueClusters.
-      
-      // Let's use issueClusters as the main table for active tasks to easily get priority/title
-      // However, if the query requires an index, we might just fetch and filter.
-      // Since it's a hackathon MVP and we didn't store uid in assignedOfficer (we stored name), 
-      // let's fetch issues where currentStatus is one of the active ones and filter client-side.
-      
-      // We'll fetch issues where currentStatus is not Resolved.
-      const q = query(collection(db, 'issueClusters'), orderBy('createdAt', 'desc'));
+      const q = query(
+        collection(db, 'tasks'), 
+        where('workerId', '==', workerId),
+        orderBy('assignedAt', 'desc')
+      );
       const snapshot = await getDocs(q);
       
       const tasks = [];
       snapshot.forEach(doc => {
-        const data = doc.data();
-        // MVP Filter: In a real system, we match UID. Here we might match name from the dummy list if we don't have UID matching.
-        // Wait, in Register.jsx we didn't force a specific name. We just stored `name`.
-        // Let's match by assignedOfficer name for MVP demo purposes.
-        if (data.assignedOfficer) {
-           tasks.push({ id: doc.id, ...data });
-        }
+        tasks.push({ id: doc.id, ...doc.data() });
       });
 
       return tasks;
@@ -39,11 +27,63 @@ export const taskService = {
   },
 
   /**
+   * Admin: Assigns an issue to a worker using a batched write
+   */
+  assignTask: async (issueId, workerId, departmentId, municipalityId, assignedByUid, deadline = null) => {
+    const { writeBatch } = await import('firebase/firestore');
+    const batch = writeBatch(db);
+
+    try {
+      // 1. Create the new Task document
+      const tasksRef = collection(db, 'tasks');
+      const newTaskRef = doc(tasksRef);
+      
+      batch.set(newTaskRef, {
+        issueId,
+        workerId,
+        departmentId,
+        municipalityId: municipalityId || null,
+        assignedBy: assignedByUid,
+        assignedAt: serverTimestamp(),
+        deadline: deadline ? new Date(deadline) : null,
+        status: 'assigned'
+      });
+
+      // 2. Update the Issue document
+      const issueRef = doc(db, 'issues', issueId);
+      batch.update(issueRef, {
+        assignedWorkerId: workerId,
+        status: 'assigned',
+        updatedAt: serverTimestamp()
+      });
+
+      // 3. (Optional) Audit Log is handled by auditService outside the batch since it's a separate concern, 
+      // but if we want it atomic, we can add it here.
+      const auditRef = doc(collection(db, 'audit_logs'));
+      batch.set(auditRef, {
+        actorId: assignedByUid,
+        actorRole: 'admin',
+        action: 'ASSIGN_TASK',
+        resourceType: 'issue',
+        resourceId: issueId,
+        timestamp: serverTimestamp(),
+        metadata: { workerId, taskId: newTaskRef.id }
+      });
+
+      await batch.commit();
+      return { success: true, taskId: newTaskRef.id };
+    } catch (error) {
+      console.error("Task assignment failed:", error);
+      throw error;
+    }
+  },
+
+  /**
    * Fetches a single task detail
    */
-  getTaskDetails: async (clusterId) => {
+  getTaskDetails: async (issueId) => {
     try {
-      const docRef = doc(db, 'issueClusters', clusterId);
+      const docRef = doc(db, 'issues', issueId);
       const snap = await getDoc(docRef);
       if (snap.exists()) {
         return { id: snap.id, ...snap.data() };
@@ -58,8 +98,8 @@ export const taskService = {
   /**
    * Accepts a task using an atomic transaction to prevent race conditions.
    */
-  acceptTask: async (clusterId, workerId) => {
-    const docRef = doc(db, 'issueClusters', clusterId);
+  acceptTask: async (issueId, workerId) => {
+    const docRef = doc(db, 'issues', issueId);
     
     try {
       await runTransaction(db, async (transaction) => {
@@ -69,12 +109,12 @@ export const taskService = {
         }
 
         const data = taskDoc.data();
-        if (data.currentStatus !== 'Assigned') {
+        if (data.status !== 'assigned') {
           throw new Error("Task has already been accepted or is no longer available.");
         }
 
         transaction.update(docRef, {
-          currentStatus: 'Accepted',
+          status: 'accepted',
           acceptedBy: workerId,
           acceptedAt: serverTimestamp(),
           updatedAt: serverTimestamp()
@@ -82,7 +122,7 @@ export const taskService = {
       });
       
       // Add status history outside transaction for simplicity
-      await taskService.addStatusHistory(clusterId, 'Assigned', 'Accepted', workerId, "Task accepted by worker");
+      await taskService.addStatusHistory(issueId, 'assigned', 'accepted', workerId, "Task accepted by worker");
       
       return true;
     } catch (error) {
@@ -94,18 +134,18 @@ export const taskService = {
   /**
    * Starts a task
    */
-  startTask: async (clusterId, workerId) => {
+  startTask: async (issueId, workerId) => {
     try {
-      const docRef = doc(db, 'issueClusters', clusterId);
+      const docRef = doc(db, 'issues', issueId);
       
       await updateDoc(docRef, {
-        currentStatus: 'In Progress',
+        status: 'in_progress',
         startedBy: workerId,
         startedAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       });
 
-      await taskService.addStatusHistory(clusterId, 'Accepted', 'In Progress', workerId, "Work started");
+      await taskService.addStatusHistory(issueId, 'accepted', 'in_progress', workerId, "Work started");
       return true;
     } catch (error) {
       console.error("Error starting task:", error);
@@ -116,12 +156,12 @@ export const taskService = {
   /**
    * Completes a task
    */
-  completeTask: async (clusterId, workerId, workDescription, beforeEvidence, afterEvidence) => {
+  completeTask: async (issueId, workerId, workDescription, beforeEvidence, afterEvidence) => {
     try {
-      const docRef = doc(db, 'issueClusters', clusterId);
+      const docRef = doc(db, 'issues', issueId);
       
       await updateDoc(docRef, {
-        currentStatus: 'Awaiting Verification',
+        status: 'verification_pending',
         completedBy: workerId,
         completedAt: serverTimestamp(),
         workDescription,
@@ -130,7 +170,7 @@ export const taskService = {
         updatedAt: serverTimestamp()
       });
 
-      await taskService.addStatusHistory(clusterId, 'In Progress', 'Awaiting Verification', workerId, workDescription);
+      await taskService.addStatusHistory(issueId, 'in_progress', 'verification_pending', workerId, workDescription);
       return true;
     } catch (error) {
       console.error("Error completing task:", error);

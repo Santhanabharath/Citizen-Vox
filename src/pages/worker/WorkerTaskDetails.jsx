@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, MapPin, PlayCircle, CheckCircle, FileText } from 'lucide-react';
+import { ArrowLeft, MapPin, PlayCircle, CheckCircle, FileText, Navigation } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { taskService } from '../../services/taskService';
 import EvidenceUploader from '../../components/resolution/EvidenceUploader';
@@ -45,7 +45,7 @@ const WorkerTaskDetails = () => {
     setActionLoading(true);
     try {
       await taskService.startTask(id, user.uid);
-      setTask(prev => ({ ...prev, currentStatus: 'In Progress' }));
+      setTask(prev => ({ ...prev, status: 'in_progress' }));
     } catch (err) {
       console.error(err);
       alert("Failed to start task.");
@@ -64,7 +64,7 @@ const WorkerTaskDetails = () => {
     setActionLoading(true);
     try {
       await taskService.completeTask(id, user.uid, workDescription, beforeImage, afterImage);
-      setTask(prev => ({ ...prev, currentStatus: 'Awaiting Verification' }));
+      setTask(prev => ({ ...prev, status: 'verification_pending' }));
     } catch (err) {
       console.error(err);
       alert("Failed to submit completion.");
@@ -94,7 +94,7 @@ const WorkerTaskDetails = () => {
               background: 'var(--surface-soft)',
               color: 'var(--text-primary)'
             }}>
-              {task.currentStatus}
+              {task.status}
             </span>
             <h1 className="text-h2" style={{ marginTop: '0.5rem' }}>{task.title}</h1>
           </div>
@@ -105,9 +105,24 @@ const WorkerTaskDetails = () => {
         </p>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: '1rem', background: 'var(--surface-soft)', borderRadius: 'var(--radius-md)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-primary)' }}>
-            <MapPin size={16} color="var(--text-muted)" />
-            <span className="text-small">{task.locationName || 'Location unknown'}</span>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem', color: 'var(--text-primary)' }}>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <MapPin size={16} color="var(--text-muted)" style={{ marginTop: '0.125rem' }} />
+              <div>
+                <span className="text-small" style={{ display: 'block', fontWeight: 500 }}>{task.locationName || 'Location unknown'}</span>
+                {task.address && <span className="text-small text-muted" style={{ display: 'block', marginTop: '0.25rem' }}>{task.address}</span>}
+              </div>
+            </div>
+            {task.latitude && task.longitude && (
+              <a 
+                href={`https://www.google.com/maps/dir/?api=1&destination=${task.latitude},${task.longitude}`}
+                target="_blank" 
+                rel="noopener noreferrer"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', padding: '0.375rem 0.75rem', background: 'var(--primary-green)', color: 'white', textDecoration: 'none', borderRadius: 'var(--radius-sm)', fontSize: '0.75rem', fontWeight: 600, flexShrink: 0 }}
+              >
+                <Navigation size={14} /> Navigate
+              </a>
+            )}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-primary)' }}>
             <FileText size={16} color="var(--text-muted)" />
@@ -117,18 +132,18 @@ const WorkerTaskDetails = () => {
       </div>
 
       {/* Action Area based on status */}
-      {task.currentStatus === 'Assigned' || task.currentStatus === 'Accepted' || task.currentStatus === 'Verified' ? (
+      {task.status === 'assigned' || task.status === 'accepted' ? (
         <div style={{ textAlign: 'center', padding: '2rem 1rem' }}>
           <button 
             onClick={handleStartWork}
-            disabled={actionLoading || task.currentStatus === 'Verified'}
+            disabled={actionLoading}
             className="btn-primary"
             style={{ width: '100%', padding: '1rem', fontSize: '1.125rem', display: 'flex', justifyContent: 'center', gap: '0.5rem', borderRadius: 'var(--radius-md)' }}
           >
             <PlayCircle size={24} /> {actionLoading ? 'Starting...' : 'Start Work Now'}
           </button>
         </div>
-      ) : task.currentStatus === 'In Progress' ? (
+      ) : task.status === 'in_progress' ? (
         <div style={{ background: 'var(--surface)', padding: '1.5rem', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)' }}>
           <h2 className="text-h3" style={{ marginBottom: '1.5rem' }}>Complete Work Order</h2>
           <form onSubmit={handleCompleteWork}>

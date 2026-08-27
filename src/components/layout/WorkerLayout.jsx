@@ -10,13 +10,13 @@ const WorkerLayout = () => {
   const { user, loading } = useAuth();
 
   useEffect(() => {
-    if (!loading && (!user || user.role !== 'field_worker')) {
+    if (!loading && (!user || user.role !== 'worker')) {
       navigate('/login');
     }
   }, [user, loading, navigate]);
 
   if (loading) return <div>Loading...</div>;
-  if (!user || user.role !== 'field_worker') return null;
+  if (!user || user.role !== 'worker') return null;
 
   return (
     <div className="app-layout citizen-layout" style={{ background: 'var(--off-white)', minHeight: '100vh' }}>

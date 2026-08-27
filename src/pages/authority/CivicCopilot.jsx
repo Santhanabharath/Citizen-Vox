@@ -21,12 +21,15 @@ const CivicCopilot = () => {
         let q = collection(db, 'issueClusters');
         let queryConstraints = [orderBy('createdAt', 'desc'), limit(50)];
 
-        if (user?.role === 'municipal_admin' && user?.municipalityId) {
-          queryConstraints.push(where('municipalityId', '==', user.municipalityId));
-        } else if (user?.role === 'department_officer' && user?.departmentId) {
-          queryConstraints.push(where('departmentId', '==', user.departmentId));
-        } else if (user?.role !== 'super_admin') {
+        if (user?.role !== 'admin') {
           return; // Ensure no unauthorized data fetch
+        }
+
+        if (user?.municipalityId) {
+          queryConstraints.push(where('municipalityId', '==', user.municipalityId));
+        }
+        if (user?.departmentId) {
+          queryConstraints.push(where('departmentId', '==', user.departmentId));
         }
 
         const snapshot = await getDocs(query(q, ...queryConstraints));

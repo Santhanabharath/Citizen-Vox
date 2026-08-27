@@ -5,7 +5,8 @@ import { useAuth } from '../../hooks/useAuth';
 import { auth } from '../../firebase/config';
 import './Layout.css';
 
-const AuthorityLayout = () => {
+const AdminLayout = () => {
+  const roleBadge = "Admin";
   const location = useLocation();
   const navigate = useNavigate();
   const { user, loading } = useAuth();
@@ -23,45 +24,20 @@ const AuthorityLayout = () => {
     }
   };
   
-  let menuItems = [];
-  let roleBadge = "Authority";
-  
-  if (user?.role === 'super_admin') {
-    roleBadge = "Super Admin";
-    menuItems = [
-      { icon: <LayoutDashboard size={20} />, label: 'Command Center', path: '/admin' },
-      { icon: <Map size={20} />, label: 'Municipalities', path: '/admin/municipalities' },
-      { icon: <Users size={20} />, label: 'Users', path: '/admin/users' },
-      { icon: <FileText size={20} />, label: 'Departments', path: '/admin/departments' },
-      { icon: <FileText size={20} />, label: 'All Issues', path: '/admin/issues' },
-      { icon: <LayoutDashboard size={20} />, label: 'Intelligence', path: '/admin/intelligence' },
-      { icon: <FileText size={20} />, label: 'Integrity', path: '/admin/integrity' },
-      { icon: <FileText size={20} />, label: 'Audit Logs', path: '/admin/audit-logs' },
-      { icon: <Settings size={20} />, label: 'Settings', path: '/admin/settings' },
-    ];
-  } else if (user?.role === 'municipal_admin') {
-    roleBadge = "Municipal Admin";
-    menuItems = [
-      { icon: <LayoutDashboard size={20} />, label: 'Dashboard', path: '/authority' },
-      { icon: <FileText size={20} />, label: 'Priority Queue', path: '/authority/queue' },
-      { icon: <Map size={20} />, label: 'Command Map', path: '/authority/map' },
-      { icon: <Users size={20} />, label: 'Departments', path: '/authority/departments' },
-      { icon: <FileText size={20} />, label: 'Escalations', path: '/authority/escalations' },
-      { icon: <LayoutDashboard size={20} />, label: 'Civic Memory', path: '/authority/memory' },
-      { icon: <FileText size={20} />, label: 'Performance', path: '/authority/performance' },
-      { icon: <FileText size={20} />, label: 'Integrity', path: '/authority/integrity' },
-      { icon: <LayoutDashboard size={20} />, label: 'Civic Copilot', path: '/authority/copilot' },
-    ];
-  } else if (user?.role === 'department_officer') {
-    roleBadge = "Dept. Officer";
-    menuItems = [
-      { icon: <LayoutDashboard size={20} />, label: 'Dashboard', path: '/department' },
-      { icon: <FileText size={20} />, label: 'Priority Queue', path: '/department/queue' },
-      { icon: <Users size={20} />, label: 'Workers', path: '/department/workers' },
-      { icon: <LayoutDashboard size={20} />, label: 'Civic Memory', path: '/department/memory' },
-      { icon: <FileText size={20} />, label: 'Performance', path: '/department/performance' },
-    ];
-  }
+  const menuItems = [
+    { icon: <LayoutDashboard size={20} />, label: 'Dashboard', path: '/admin' },
+    { icon: <FileText size={20} />, label: 'Issues', path: '/admin/issues' },
+    { icon: <LayoutDashboard size={20} />, label: 'Priority Queue', path: '/admin/priority' },
+    { icon: <Map size={20} />, label: 'Map', path: '/admin/map' },
+    { icon: <Users size={20} />, label: 'Workers', path: '/admin/workers' },
+    { icon: <FileText size={20} />, label: 'Departments', path: '/admin/departments' },
+    { icon: <FileText size={20} />, label: 'Escalations', path: '/admin/escalations' },
+    { icon: <LayoutDashboard size={20} />, label: 'Civic Memory', path: '/admin/civic-memory' },
+    { icon: <FileText size={20} />, label: 'Resolution Performance', path: '/admin/resolution-performance' },
+    { icon: <FileText size={20} />, label: 'Integrity', path: '/admin/integrity' },
+    { icon: <LayoutDashboard size={20} />, label: 'Civic Copilot', path: '/admin/copilot' },
+    { icon: <FileText size={20} />, label: 'Audit Logs', path: '/admin/audit-logs' },
+  ];
 
   if (loading) return <div>Loading...</div>;
   if (!user || user.role === 'citizen') return null;
@@ -119,4 +95,4 @@ const AuthorityLayout = () => {
   );
 };
 
-export default AuthorityLayout;
+export default AdminLayout;

@@ -16,10 +16,25 @@ const Login = () => {
     try {
       const userDoc = await getDoc(doc(auth.app.firestore || (await import('../../firebase/config')).db, 'users', user.uid));
       if (userDoc.exists()) {
-        const role = userDoc.data().role;
-        if (role === 'field_worker') navigate('/worker');
-        else if (role !== 'citizen') navigate('/authority');
-        else navigate('/citizen');
+        let role = userDoc.data().role;
+        
+        // On-the-fly migration
+        const adminRoles = ['super_admin', 'municipal_admin', 'department_officer', 'authority', 'authority_admin', 'admin_user'];
+        if (adminRoles.includes(role)) {
+          role = 'admin';
+          await setDoc(doc(auth.app.firestore || (await import('../../firebase/config')).db, 'users', user.uid), { role: 'admin' }, { merge: true });
+        } else if (role === 'field_worker') {
+          role = 'worker';
+          await setDoc(doc(auth.app.firestore || (await import('../../firebase/config')).db, 'users', user.uid), { role: 'worker' }, { merge: true });
+        }
+
+        if (role === 'worker') navigate('/worker');
+        else if (role === 'admin') navigate('/admin');
+        else if (role === 'citizen') navigate('/citizen');
+        else {
+          setError("Account configuration requires administrator attention.");
+          await signOut(auth);
+        }
       } else {
         // First time Google/Phone sign in -> auto create citizen
         await setDoc(doc(auth.app.firestore || (await import('../../firebase/config')).db, 'users', user.uid), {
@@ -71,10 +86,9 @@ const Login = () => {
     setError(null);
     try {
       const demoAccounts = [
-        { email: 'admin@citizenvox.gov', pass: 'Admin123!', role: 'super_admin', name: 'Super Admin', dept: null },
-        { email: 'muni@citizenvox.gov', pass: 'Muni123!', role: 'municipal_admin', name: 'Municipal Admin', dept: null },
-        { email: 'roads@citizenvox.gov', pass: 'Roads123!', role: 'department_officer', name: 'Department Officer', dept: 'Roads' },
-        { email: 'worker1@citizenvox.gov', pass: 'Worker123!', role: 'field_worker', name: 'Field Worker', dept: 'Roads' }
+        { email: 'admin@citizenvox.gov', pass: 'Admin123!', role: 'admin', name: 'System Admin', dept: null },
+        { email: 'worker1@citizenvox.gov', pass: 'Worker123!', role: 'worker', name: 'Field Worker', dept: 'Roads' },
+        { email: 'citizen@citizenvox.gov', pass: 'Citizen123!', role: 'citizen', name: 'Citizen Demo', dept: null }
       ];
 
       for (const acc of demoAccounts) {

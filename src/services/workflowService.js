@@ -123,11 +123,15 @@ export const workflowService = {
   },
 
   /**
-   * Fetches internal notes.
+   * Fetches internal notes for a given issue.
    */
-  getInternalNotes: async (clusterId) => {
+  getInternalNotes: async (issueId) => {
     try {
-      const notesQ = query(collection(db, 'internalNotes'), where('clusterId', '==', clusterId), orderBy('createdAt', 'desc'));
+      const notesQ = query(
+        collection(db, 'internalNotes'), 
+        where('issueId', '==', issueId), 
+        orderBy('createdAt', 'desc')
+      );
       const snapshot = await getDocs(notesQ);
       
       const notes = [];
@@ -136,8 +140,33 @@ export const workflowService = {
       });
       return notes;
     } catch (error) {
+      // Silently handle permission errors (notes visible only to admin after rules deploy)
+      if (error?.code === 'permission-denied') {
+        console.warn("InternalNotes: permission denied - rules may need deploying.");
+        return [];
+      }
       console.error("Error fetching internal notes:", error);
       return [];
+    }
+  },
+
+  /**
+   * Adds an internal note for a given issue.
+   */
+  addInternalNote: async (issueId, text, authorId, department) => {
+    try {
+      await addDoc(collection(db, 'internalNotes'), {
+        issueId,
+        // keep clusterId for backward compat
+        clusterId: issueId,
+        text,
+        authorId,
+        department,
+        createdAt: serverTimestamp()
+      });
+    } catch (error) {
+      console.error("Error adding internal note:", error);
+      throw error;
     }
   }
 };

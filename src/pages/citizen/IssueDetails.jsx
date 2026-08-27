@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { MapPin, ArrowLeft, ShieldCheck, AlertTriangle, MessageSquare, Clock } from 'lucide-react';
+import { MapPin, ArrowLeft, ShieldCheck, AlertTriangle, MessageSquare, Clock, Navigation } from 'lucide-react';
 import { issueService } from '../../services/issueService';
 import Button from '../../components/common/Button';
 
@@ -66,8 +66,21 @@ const IssueDetails = () => {
           
           <h1 className="text-h2" style={{ fontSize: '1.75rem', marginBottom: '8px', lineHeight: 1.2 }}>{issue.title}</h1>
           
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
-            <MapPin size={16} /> {issue.location?.address || 'Location unknown'}
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
+              <MapPin size={16} style={{ flexShrink: 0 }} /> 
+              <span>{issue.address || issue.location?.address || 'Location unknown'}</span>
+            </div>
+            {(issue.latitude || issue.location?.lat) && (issue.longitude || issue.location?.lng) && (
+              <a 
+                href={`https://www.google.com/maps/dir/?api=1&destination=${issue.latitude || issue.location?.lat},${issue.longitude || issue.location?.lng}`}
+                target="_blank" 
+                rel="noopener noreferrer"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', padding: '0.375rem 0.75rem', background: 'var(--primary-green)', color: 'white', textDecoration: 'none', borderRadius: 'var(--radius-sm)', fontSize: '0.75rem', fontWeight: 600, flexShrink: 0 }}
+              >
+                <Navigation size={14} /> Navigate
+              </a>
+            )}
           </div>
         </div>
 

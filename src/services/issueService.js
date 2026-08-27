@@ -16,6 +16,7 @@ import {
   deleteDoc
 } from 'firebase/firestore';
 import { gamificationService } from './gamificationService';
+import { clusterService } from './clusterService';
 
 export const issueService = {
   /**
@@ -48,6 +49,13 @@ export const issueService = {
     };
 
     const docRef = await addDoc(issuesRef, newIssue);
+    
+    // Auto-cluster for Civic Memory
+    try {
+      await clusterService.joinCluster(docRef.id, newIssue);
+    } catch (err) {
+      console.error("Clustering failed during issue creation:", err);
+    }
     
     // Award 50 XP for reporting an issue
     await gamificationService.addXp(userId, 50);

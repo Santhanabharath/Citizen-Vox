@@ -29,6 +29,8 @@
   /* Logical Mappings (Light Mode default for content) */
   --primary: var(--primary-green);
   --primary-hover: var(--bright-green);
+  --accent: var(--primary-green);
+  --accent-hover: var(--bright-green);
   --bg: var(--off-white);
   --surface: var(--white);
   --surface-soft: var(--light-surface);

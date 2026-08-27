@@ -51,10 +51,8 @@ const ProtectedRoute = ({ allowedRoles, redirectPath = '/login' }) => {
 
   if (allowedRoles && !allowedRoles.includes(userRole)) {
     // Redirect based on actual role to prevent infinite loops or being stuck
-    if (userRole === 'super_admin') return <Navigate to="/admin" replace />;
-    if (userRole === 'municipal_admin') return <Navigate to="/authority" replace />;
-    if (userRole === 'department_officer') return <Navigate to="/department" replace />;
-    if (userRole === 'field_worker') return <Navigate to="/worker" replace />;
+    if (userRole === 'admin') return <Navigate to="/admin" replace />;
+    if (userRole === 'worker') return <Navigate to="/worker" replace />;
     return <Navigate to="/citizen" replace />;
   }
 

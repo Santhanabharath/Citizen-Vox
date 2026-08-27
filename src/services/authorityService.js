@@ -10,14 +10,13 @@ export const authorityService = {
       let q = collection(db, 'issueClusters');
       let queryConstraints = [];
 
-      if (user.role !== 'super_admin') {
+      if (user.role === 'admin') {
         if (user.municipalityId) {
           queryConstraints.push(where('municipalityId', '==', user.municipalityId));
         }
-      }
-
-      if (user.role === 'department_officer' && user.departmentId) {
-        queryConstraints.push(where('departmentId', '==', user.departmentId));
+        if (user.departmentId) {
+          queryConstraints.push(where('departmentId', '==', user.departmentId));
+        }
       }
 
       if (filters.status && filters.status !== 'All') {
@@ -59,23 +58,56 @@ export const authorityService = {
   },
 
   /**
+   * Fetches all raw issues for the admin dashboard.
+   */
+  getAllIssues: async (user, limitCount = 100) => {
+    try {
+      let q = collection(db, 'issues');
+      let queryConstraints = [orderBy('createdAt', 'desc'), limit(limitCount)];
+
+      if (user.role === 'admin') {
+        if (user.municipalityId) {
+          queryConstraints.push(where('municipalityId', '==', user.municipalityId));
+        }
+        if (user.departmentId) {
+          queryConstraints.push(where('departmentId', '==', user.departmentId));
+        }
+      }
+
+      const finalQuery = query(q, ...queryConstraints);
+      const snapshot = await getDocs(finalQuery);
+      
+      const issues = [];
+      snapshot.forEach(doc => {
+        issues.push({ id: doc.id, ...doc.data() });
+      });
+
+      return issues;
+    } catch (error) {
+      console.error("Error fetching all issues:", error);
+      throw error;
+    }
+  },
+
+  /**
    * Gets specific issue cluster details.
    */
-  getIssueDetails: async (clusterId) => {
+  getIssueDetails: async (issueId) => {
     try {
-      const docRef = doc(db, 'issueClusters', clusterId);
-      const snap = await getDoc(docRef);
-      if (snap.exists()) {
-        return { id: snap.id, ...snap.data() };
-      }
-      
-      // Fallback to independent issue
-      const issueRef = doc(db, 'issues', clusterId);
+      // Check issues collection first (primary data store)
+      const issueRef = doc(db, 'issues', issueId);
       const issueSnap = await getDoc(issueRef);
       if (issueSnap.exists()) {
-        return { id: issueSnap.id, ...issueSnap.data(), isIndependent: true };
+        return { id: issueSnap.id, ...issueSnap.data() };
       }
-      
+
+      // Fallback: legacy issueClusters collection
+      const clusterRef = doc(db, 'issueClusters', issueId);
+      const clusterSnap = await getDoc(clusterRef);
+      if (clusterSnap.exists()) {
+        return { id: clusterSnap.id, ...clusterSnap.data(), isCluster: true };
+      }
+
       return null;
     } catch (error) {
       console.error("Error fetching issue details:", error);
@@ -93,14 +125,13 @@ export const authorityService = {
       // In production, we'd use Firestore Aggregation queries (COUNT(), etc.)
       let queryConstraints = [orderBy('createdAt', 'desc'), limit(500)];
       
-      if (user.role !== 'super_admin') {
+      if (user.role === 'admin') {
         if (user.municipalityId) {
           queryConstraints.push(where('municipalityId', '==', user.municipalityId));
         }
-      }
-      
-      if (user.role === 'department_officer' && user.departmentId) {
-        queryConstraints.push(where('departmentId', '==', user.departmentId));
+        if (user.departmentId) {
+          queryConstraints.push(where('departmentId', '==', user.departmentId));
+        }
       }
 
       const q = query(collection(db, 'issueClusters'), ...queryConstraints);

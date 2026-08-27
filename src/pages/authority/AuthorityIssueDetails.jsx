@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, MapPin } from 'lucide-react';
+import { ArrowLeft, MapPin, Navigation } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { authorityService } from '../../services/authorityService';
 import IssueStatus from '../../components/citizen/IssueStatus';
@@ -47,7 +47,7 @@ const AuthorityIssueDetails = () => {
 
   return (
     <div style={{ padding: '2rem', maxWidth: '1400px', margin: '0 auto', background: 'var(--background)' }}>
-      <Link to={user?.role === 'department_officer' ? '/department' : '/authority'} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-secondary)', textDecoration: 'none', marginBottom: '1.5rem', fontSize: '0.9375rem' }}>
+      <Link to="/admin" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-secondary)', textDecoration: 'none', marginBottom: '1.5rem', fontSize: '0.9375rem' }}>
         <ArrowLeft size={16} /> Back to Dashboard
       </Link>
 
@@ -123,9 +123,22 @@ const AuthorityIssueDetails = () => {
           {/* Map Location */}
           {issue.latitude && issue.longitude && (
             <div style={{ background: 'var(--surface)', padding: '1.5rem', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)' }}>
-              <h3 className="text-h3" style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <MapPin size={20} /> Incident Location
-              </h3>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
+                <div>
+                  <h3 className="text-h3" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+                    <MapPin size={20} /> Incident Location
+                  </h3>
+                  {issue.address && <p style={{ color: 'var(--text-secondary)', fontSize: '0.9375rem' }}>{issue.address}</p>}
+                </div>
+                <a 
+                  href={`https://www.google.com/maps/dir/?api=1&destination=${issue.latitude},${issue.longitude}`}
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1rem', background: 'var(--primary-green)', color: 'white', textDecoration: 'none', borderRadius: 'var(--radius-md)', fontSize: '0.875rem', fontWeight: 600, flexShrink: 0 }}
+                >
+                  <Navigation size={16} /> Get Directions
+                </a>
+              </div>
               <div style={{ height: '300px', width: '100%', borderRadius: 'var(--radius-md)', overflow: 'hidden', border: '1px solid var(--border)', zIndex: 1 }}>
                 <MapContainer center={{ lat: issue.latitude, lng: issue.longitude }} zoom={16} style={{ height: '100%', width: '100%' }}>
                   <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />

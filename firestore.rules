@@ -1,106 +1,156 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    
+
+    // ─── Helper Functions ───────────────────────────────────────────────
     function isAuthenticated() {
       return request.auth != null;
     }
-    
+
     function getUserData() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
-    
+
     function getRole() {
       return getUserData().role;
     }
-    
-    function isSuperAdmin() {
-      return isAuthenticated() && getRole() == 'super_admin';
-    }
-    
-    function isMunicipalAdmin(muniId) {
-      return isAuthenticated() && getRole() == 'municipal_admin' && getUserData().municipalityId == muniId;
-    }
-    
-    function isDeptOfficer(muniId, deptId) {
-      return isAuthenticated() && getRole() == 'department_officer' && getUserData().municipalityId == muniId && getUserData().departmentId == deptId;
+
+    function isAdmin() {
+      return isAuthenticated() && getRole() == 'admin';
     }
 
-    // Users Collection
+    function isWorker() {
+      return isAuthenticated() && getRole() == 'worker';
+    }
+
+    function isCitizen() {
+      return isAuthenticated() && getRole() == 'citizen';
+    }
+
+    // Check if admin is scoped to a specific municipality (null = global admin)
+    function hasAdminMuniAccess(municipalityId) {
+      return isAdmin() && (
+        getUserData().municipalityId == null ||
+        getUserData().municipalityId == municipalityId
+      );
+    }
+
+    // ─── Users Collection ────────────────────────────────────────────────
     match /users/{userId} {
-      // Users can read their own profile, or admins can read all
-      allow read: if isSuperAdmin() || request.auth.uid == userId;
-      // Users can update their own non-role fields (enforced loosely here), admins can write all
-      allow create, update: if isSuperAdmin() || request.auth.uid == userId;
-      allow delete: if isSuperAdmin();
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && request.auth.uid == userId;
+      allow update: if isAuthenticated() && (
+        request.auth.uid == userId || isAdmin()
+      );
+      allow delete: if isAdmin();
     }
-    
-    // Municipalities Collection
+
+    // ─── Municipalities ───────────────────────────────────────────────────
     match /municipalities/{muniId} {
-      allow read: if isAuthenticated(); // Needed for dropdowns
-      allow write: if isSuperAdmin();
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
     }
-    
-    // Departments Collection
+
+    // ─── Departments ──────────────────────────────────────────────────────
     match /departments/{deptId} {
-      allow read: if isAuthenticated(); 
-      allow write: if isSuperAdmin() || isMunicipalAdmin(resource.data.municipalityId);
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
     }
-    
-    // Issues Collection
+
+    // ─── Issues Collection ────────────────────────────────────────────────
     match /issues/{issueId} {
-      // Public reading for the map and citizen views
-      allow read: if true; 
-      
-      // Creating: citizens can create, setting themselves as reporter
-      allow create: if isAuthenticated() && request.resource.data.reporterId == request.auth.uid;
-      
-      // Updating: 
-      // - Super Admin can update any
-      // - Municipal Admin can update if issue belongs to their municipality
-      // - Dept Officer can update if issue belongs to their department
-      // - Reporter can update (e.g. resolve/delete their own)
-      allow update: if isSuperAdmin() || 
-                    isMunicipalAdmin(resource.data.municipalityId) ||
-                    isDeptOfficer(resource.data.municipalityId, resource.data.departmentId) ||
-                    request.auth.uid == resource.data.reporterId;
-                    
-      allow delete: if isSuperAdmin() || request.auth.uid == resource.data.reporterId;
+      // Anyone can read issues (for public civic transparency)
+      allow read: if true;
+
+      // Any authenticated user can report a new issue
+      allow create: if isAuthenticated() &&
+        request.resource.data.reportedBy == request.auth.uid;
+
+      // Admin (scoped), the original reporter, OR assigned worker can update
+      allow update: if
+        hasAdminMuniAccess(resource.data.municipalityId) ||
+        request.auth.uid == resource.data.reportedBy ||
+        (isWorker() && resource.data.assignedWorkerId == request.auth.uid);
+
+      // Only admin or reporter can delete
+      allow delete: if
+        hasAdminMuniAccess(resource.data.municipalityId) ||
+        request.auth.uid == resource.data.reportedBy;
     }
-    
-    // Tasks Collection (Field Worker Tasks)
+
+    // ─── Tasks Collection ─────────────────────────────────────────────────
     match /tasks/{taskId} {
-      allow read: if isSuperAdmin() ||
-                  isMunicipalAdmin(resource.data.municipalityId) ||
-                  isDeptOfficer(resource.data.municipalityId, resource.data.departmentId) ||
-                  (isAuthenticated() && resource.data.workerId == request.auth.uid); // Worker reads own tasks
-                  
-      // Dept Officers and above can create/assign
-      allow create: if isSuperAdmin() || 
-                    isMunicipalAdmin(request.resource.data.municipalityId) ||
-                    isDeptOfficer(request.resource.data.municipalityId, request.resource.data.departmentId);
-                    
-      // Updates: Officers can update, Worker can update their assigned tasks (to submit progress)
-      allow update: if isSuperAdmin() || 
-                    isMunicipalAdmin(resource.data.municipalityId) ||
-                    isDeptOfficer(resource.data.municipalityId, resource.data.departmentId) ||
-                    (isAuthenticated() && resource.data.workerId == request.auth.uid);
-                    
-      allow delete: if isSuperAdmin() || isMunicipalAdmin(resource.data.municipalityId) || isDeptOfficer(resource.data.municipalityId, resource.data.departmentId);
+      // Admin can read all tasks; worker can read only their own
+      allow read: if isAdmin() ||
+        (isWorker() && resource.data.workerId == request.auth.uid);
+
+      // Only admin can create tasks (assignment)
+      allow create: if isAdmin();
+
+      // Admin or assigned worker can update task status
+      allow update: if isAdmin() ||
+        (isWorker() && resource.data.workerId == request.auth.uid);
+
+      allow delete: if isAdmin();
     }
-    
-    // Integrity Reports (Sensitive)
-    match /integrity_reports/{reportId} {
-      allow read: if isSuperAdmin() || isMunicipalAdmin(resource.data.municipalityId);
-      allow create: if isAuthenticated(); // Anyone can report
-      allow update, delete: if isSuperAdmin() || isMunicipalAdmin(resource.data.municipalityId);
+
+    // ─── Issue Clusters (legacy) ──────────────────────────────────────────
+    match /issueClusters/{clusterId} {
+      allow read: if true;
+      allow create: if isAuthenticated();
+      allow update: if isAdmin() ||
+        (isWorker() && resource.data.assignedWorker == request.auth.uid) ||
+        (isWorker() && resource.data.acceptedBy == request.auth.uid);
+      allow delete: if isAdmin();
     }
-    
-    // Audit Logs
+
+    // ─── Status History ───────────────────────────────────────────────────
+    match /statusHistory/{historyId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update, delete: if isAdmin();
+    }
+
+    // ─── Internal Notes ───────────────────────────────────────────────────
+    match /internalNotes/{noteId} {
+      allow read: if isAdmin() ||
+        (isWorker() && resource.data.workerId == request.auth.uid);
+      allow create: if isAdmin() || isWorker();
+      allow update: if isAdmin();
+      allow delete: if false;
+    }
+
+    // ─── Audit Logs ───────────────────────────────────────────────────────
     match /audit_logs/{logId} {
-      allow read: if isSuperAdmin();
-      allow create: if isAuthenticated(); // System generated creates
-      allow update, delete: if false; // Immutable
+      allow read: if isAdmin();
+      allow create: if isAuthenticated();
+      allow update, delete: if false;
+    }
+
+    // ─── Integrity Reports ────────────────────────────────────────────────
+    match /integrity_reports/{reportId} {
+      allow read: if isAdmin();
+      allow create: if isAuthenticated();
+      allow update: if isAdmin();
+      allow delete: if false;
+    }
+
+    // ─── Gamification / Points ────────────────────────────────────────────
+    match /userPoints/{userId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin() || request.auth.uid == userId;
+    }
+
+    match /leaderboard/{entryId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    // ─── Civic Memory ─────────────────────────────────────────────────────
+    match /civicMemory/{memId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAdmin();
+      allow delete: if false;
     }
   }
 }

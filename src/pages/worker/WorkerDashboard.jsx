@@ -15,8 +15,8 @@ const WorkerDashboard = () => {
       try {
         if (!user) return;
         const q = query(
-          collection(db, 'issueClusters'),
-          where('assignedWorker', '==', user.uid)
+          collection(db, 'issues'),
+          where('assignedWorkerId', '==', user.uid)
         );
         const snapshot = await getDocs(q);
         const fetchedTasks = [];
@@ -83,10 +83,10 @@ const WorkerDashboard = () => {
                   background: task.currentStatus === 'In Progress' ? 'var(--warning)' : 'var(--surface-soft)',
                   color: task.currentStatus === 'In Progress' ? 'black' : 'var(--text-primary)'
                 }}>
-                  {task.currentStatus || 'Assigned'}
+                  {task.status || 'Assigned'}
                 </span>
-                <span className="text-small text-muted" style={{ fontWeight: '600', color: task.priority?.level === 'Critical' ? 'var(--danger)' : 'inherit' }}>
-                  {task.priority?.level || 'Normal'}
+                <span className="text-small text-muted" style={{ fontWeight: '600', color: (task.priority?.level === 'Critical' || task.severity === 'critical') ? 'var(--danger)' : 'inherit' }}>
+                  {task.priority?.level || task.severity || 'Normal'}
                 </span>
               </div>
               
@@ -94,7 +94,7 @@ const WorkerDashboard = () => {
               
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                 <span className="text-small text-muted" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                  <MapPin size={12} /> {task.locationName || 'Location pending'}
+                  <MapPin size={12} /> {task.address || task.location?.address || task.locationName || 'Location pending'}
                 </span>
                 <span className="text-small text-muted" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                   <Clock size={12} /> {new Date(task.createdAt?.seconds * 1000).toLocaleDateString()}

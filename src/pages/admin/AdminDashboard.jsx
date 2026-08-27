@@ -1,57 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { db } from '../../firebase/config';
-import { collection, getDocs, query, where, getCountFromServer } from 'firebase/firestore';
-import { Activity, Users, Map, AlertTriangle, CheckCircle, ShieldAlert, AlertOctagon } from 'lucide-react';
+import { Activity, AlertTriangle, CheckCircle, PieChart, Clock } from 'lucide-react';
+import { useAuth } from '../../hooks/useAuth';
 
 const AdminDashboard = () => {
-  const [stats, setStats] = useState(null);
+  const { user } = useAuth();
+  const [metrics, setMetrics] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchGlobalStats = async () => {
+    const fetchStats = async () => {
       try {
-        // Since we are enforcing NO FAKE DATA, we will fetch aggregates directly.
-        const [
-          usersSnap, 
-          muniSnap, 
-          issuesSnap, 
-          integritySnap
-        ] = await Promise.all([
-          getCountFromServer(collection(db, 'users')),
-          getCountFromServer(collection(db, 'municipalities')),
-          getDocs(collection(db, 'issues')), // Fetch all issues to calculate complex metrics locally
-          getCountFromServer(collection(db, 'integrity_reports'))
-        ]);
-
-        let active = 0;
-        let critical = 0;
-        let resolved = 0;
-        let total = issuesSnap.docs.length;
-
-        issuesSnap.forEach(doc => {
-          const data = doc.data();
-          if (data.status === 'Resolved' || data.status === 'closed') {
-            resolved++;
-          } else {
-            active++;
-          }
-          if (data.priority?.level === 'Critical' || data.severity === 'critical') {
-            critical++;
-          }
-        });
-
-        const resolutionRate = total > 0 ? Math.round((resolved / total) * 100) : 0;
-
-        setStats({
-          users: usersSnap.data().count,
-          municipalities: muniSnap.data().count,
-          activeIssues: active,
-          criticalIssues: critical,
-          resolvedIssues: resolved,
-          resolutionRate,
-          integrityReports: integritySnap.data().count
-        });
+        if (!user) return;
+        
+        const { analyticsService } = await import('../../services/analyticsService');
+        const data = await analyticsService.getAdminDashboardMetrics(
+          user.municipalityId, 
+          user.departmentId
+        );
+        
+        setMetrics(data);
       } catch (err) {
         console.error("Failed to load admin stats:", err);
       } finally {
@@ -59,8 +27,8 @@ const AdminDashboard = () => {
       }
     };
 
-    fetchGlobalStats();
-  }, []);
+    fetchStats();
+  }, [user]);
 
   if (loading) {
     return (
@@ -70,6 +38,8 @@ const AdminDashboard = () => {
     );
   }
 
+  if (!metrics) return null;
+
   return (
     <div className="dashboard-container" style={{ padding: '2rem' }}>
       <header style={{ marginBottom: '2rem' }}>
@@ -77,29 +47,72 @@ const AdminDashboard = () => {
         <p className="text-muted">Global Platform Governance & Intelligence</p>
       </header>
 
-      <div className="grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.5rem', marginBottom: '2.5rem' }}>
+      <div className="grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem', marginBottom: '2.5rem' }}>
         
         {/* KPI Cards */}
-        <StatCard icon={<Map />} label="Total Municipalities" value={stats?.municipalities || 0} />
-        <StatCard icon={<Users />} label="Total Users" value={stats?.users || 0} />
-        <StatCard icon={<Activity />} label="Active Issues" value={stats?.activeIssues || 0} />
-        <StatCard icon={<AlertTriangle color="var(--danger)" />} label="Critical Issues" value={stats?.criticalIssues || 0} />
-        <StatCard icon={<CheckCircle color="var(--success)" />} label="Resolved Issues" value={stats?.resolvedIssues || 0} />
-        <StatCard icon={<Activity />} label="Resolution Rate" value={`${stats?.resolutionRate || 0}%`} />
-        <StatCard icon={<ShieldAlert color="var(--warning)" />} label="Integrity Reports" value={stats?.integrityReports || 0} />
+        <StatCard icon={<Activity />} label="Total Issues" value={metrics.total || 0} />
+        <StatCard icon={<Activity />} label="Active Issues" value={metrics.active || 0} />
+        <StatCard icon={<AlertTriangle color="var(--danger)" />} label="Critical Issues" value={metrics.critical || 0} />
+        <StatCard icon={<CheckCircle color="var(--success)" />} label="Resolved Issues" value={metrics.resolved || 0} />
+        <StatCard icon={<PieChart />} label="Resolution Rate" value={`${metrics.resolutionRate || 0}%`} />
+        <StatCard icon={<Clock />} label="Avg Resolution Time" value={`${metrics.avgResolutionDays || 0} Days`} />
 
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '2rem' }}>
-        <section style={{ background: 'var(--surface)', padding: '1.5rem', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)' }}>
-          <h2 className="text-h3" style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <AlertOctagon size={20} color="var(--danger)" /> Persistent Civic Problems
-          </h2>
-          {/* Honest Empty State for Persistent Problems */}
-          <div style={{ padding: '3rem', textAlign: 'center', background: 'var(--surface-hover)', borderRadius: 'var(--radius-md)' }}>
-            <p className="text-muted">No persistent problems detected globally at this time.</p>
-          </div>
-        </section>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
+        {/* Category Breakdown */}
+        <div style={{ background: 'var(--surface)', padding: '1.5rem', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)' }}>
+          <h3 className="text-h3" style={{ marginBottom: '1.5rem' }}>Category Breakdown</h3>
+          {Object.keys(metrics.categories).length === 0 ? (
+             <p className="text-muted">No data available.</p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {Object.entries(metrics.categories)
+                .sort(([,a], [,b]) => b - a)
+                .map(([category, count]) => {
+                  const percentage = Math.round((count / metrics.total) * 100);
+                  return (
+                    <div key={category}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
+                        <span style={{ fontSize: '0.875rem', fontWeight: 500, textTransform: 'capitalize' }}>{category.replace(/_/g, ' ')}</span>
+                        <span style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>{count} ({percentage}%)</span>
+                      </div>
+                      <div style={{ width: '100%', height: '8px', background: 'var(--bg-main)', borderRadius: '4px', overflow: 'hidden' }}>
+                        <div style={{ width: `${percentage}%`, height: '100%', background: 'var(--primary-green)' }}></div>
+                      </div>
+                    </div>
+                  );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Department Workload */}
+        <div style={{ background: 'var(--surface)', padding: '1.5rem', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)' }}>
+          <h3 className="text-h3" style={{ marginBottom: '1.5rem' }}>Department Workload</h3>
+          {Object.keys(metrics.departments).length === 0 ? (
+             <p className="text-muted">No data available.</p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {Object.entries(metrics.departments)
+                .sort(([,a], [,b]) => b - a)
+                .map(([dept, count]) => {
+                  const percentage = Math.round((count / metrics.total) * 100);
+                  return (
+                    <div key={dept}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
+                        <span style={{ fontSize: '0.875rem', fontWeight: 500, textTransform: 'capitalize' }}>{dept.replace(/_/g, ' ')}</span>
+                        <span style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>{count} ({percentage}%)</span>
+                      </div>
+                      <div style={{ width: '100%', height: '8px', background: 'var(--bg-main)', borderRadius: '4px', overflow: 'hidden' }}>
+                        <div style={{ width: `${percentage}%`, height: '100%', background: 'var(--accent)' }}></div>
+                      </div>
+                    </div>
+                  );
+              })}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -90,7 +90,7 @@ const PriorityQueue = () => {
 
               <div>
                 <Link 
-                  to={user.role === 'department_officer' ? `/department/issues/${issue.id}` : `/authority/issues/${issue.id}`}
+                  to={`/admin/issues/${issue.id}`}
                   style={{ padding: '0.75rem 1.5rem', background: 'var(--text-primary)', color: 'white', borderRadius: 'var(--radius-md)', textDecoration: 'none', fontWeight: '500', display: 'inline-block' }}
                 >
                   View Issue

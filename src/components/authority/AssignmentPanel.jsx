@@ -1,37 +1,74 @@
-import React, { useState } from 'react';
-import { workflowService } from '../../services/workflowService';
+import React, { useState, useEffect } from 'react';
+import { db } from '../../firebase/config';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { taskService } from '../../services/taskService';
+import { auditService } from '../../services/auditService';
 import { useAuth } from '../../hooks/useAuth';
 import Button from '../common/Button';
 
 const DEPARTMENTS = [
-  'Roads', 'Sanitation', 'Water', 'Drainage', 
-  'Electrical', 'Environment', 'Public Safety', 'General'
+  { id: 'roads', name: 'Roads & Transport' },
+  { id: 'sanitation', name: 'Sanitation' },
+  { id: 'water', name: 'Water Supply' },
+  { id: 'drainage', name: 'Drainage' },
+  { id: 'electrical', name: 'Electrical / Streetlights' },
 ];
-
-// Placeholder for officer fetch. In a real app, query users collection where role=officer & dept=selected
-const DUMMY_OFFICERS = {
-  'Roads': [{ id: 'off_r1', name: 'Officer A' }, { id: 'off_r2', name: 'Officer B' }],
-  'Sanitation': [{ id: 'off_s1', name: 'Officer C' }],
-  'Water': [{ id: 'off_w1', name: 'Officer D' }]
-};
 
 const AssignmentPanel = ({ issue, onUpdate }) => {
   const { user } = useAuth();
-  const [department, setDepartment] = useState(issue?.assignedDepartment || '');
-  const [officer, setOfficer] = useState(issue?.assignedOfficer || '');
+  const [department, setDepartment] = useState(issue?.assignedDepartmentId || issue?.departmentId || '');
+  const [worker, setWorker] = useState(issue?.assignedWorkerId || '');
+  const [workersList, setWorkersList] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [loadingWorkers, setLoadingWorkers] = useState(false);
   const [error, setError] = useState('');
 
+  useEffect(() => {
+    const fetchWorkers = async () => {
+      if (!department) {
+        setWorkersList([]);
+        return;
+      }
+      setLoadingWorkers(true);
+      try {
+        let q = query(
+          collection(db, 'users'), 
+          where('role', '==', 'worker'),
+          where('departmentId', '==', department)
+        );
+        if (user?.municipalityId) {
+          q = query(q, where('municipalityId', '==', user.municipalityId));
+        }
+        
+        const snap = await getDocs(q);
+        const fetched = [];
+        snap.forEach(doc => {
+          if (doc.data().status !== 'inactive') {
+            fetched.push({ id: doc.id, ...doc.data() });
+          }
+        });
+        setWorkersList(fetched);
+      } catch (err) {
+        console.error("Failed to fetch workers:", err);
+      } finally {
+        setLoadingWorkers(false);
+      }
+    };
+
+    fetchWorkers();
+  }, [department, user?.municipalityId]);
+
   const handleAssign = async () => {
-    if (!department) {
-      setError('Please select a department');
+    if (!department || !worker) {
+      setError('Please select both department and worker');
       return;
     }
     
     setLoading(true);
     setError('');
     try {
-      await workflowService.assignIssue(issue.id, department, officer, user.uid, issue.isIndependent);
+      await taskService.assignTask(issue.id, worker, department, user.municipalityId, user.uid);
+      await auditService.logAction(user.uid, user.role, 'ASSIGN_TASK', 'issue', issue.id, { workerId: worker });
       if (onUpdate) onUpdate();
     } catch (err) {
       setError('Assignment failed. Please try again.');
@@ -39,8 +76,6 @@ const AssignmentPanel = ({ issue, onUpdate }) => {
       setLoading(false);
     }
   };
-
-  const officers = department ? (DUMMY_OFFICERS[department] || [{ id: 'dummy', name: 'No officers found' }]) : [];
 
   return (
     <div style={{ background: 'var(--surface)', padding: '1.5rem', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)' }}>
@@ -53,28 +88,31 @@ const AssignmentPanel = ({ issue, onUpdate }) => {
           <label className="text-small text-muted" style={{ display: 'block', marginBottom: '0.25rem' }}>Department</label>
           <select 
             value={department} 
-            onChange={(e) => { setDepartment(e.target.value); setOfficer(''); }}
-            style={{ width: '100%', padding: '0.75rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)' }}
+            onChange={(e) => { setDepartment(e.target.value); setWorker(''); }}
+            style={{ width: '100%', padding: '0.75rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)', background: 'var(--bg-main)' }}
           >
             <option value="">Select Department...</option>
-            {DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}
+            {DEPARTMENTS.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
           </select>
         </div>
 
         <div>
-          <label className="text-small text-muted" style={{ display: 'block', marginBottom: '0.25rem' }}>Officer (Optional)</label>
+          <label className="text-small text-muted" style={{ display: 'block', marginBottom: '0.25rem' }}>Worker</label>
           <select 
-            value={officer} 
-            onChange={(e) => setOfficer(e.target.value)}
-            disabled={!department}
-            style={{ width: '100%', padding: '0.75rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)', background: !department ? 'var(--surface-soft)' : 'white' }}
+            value={worker} 
+            onChange={(e) => setWorker(e.target.value)}
+            disabled={!department || loadingWorkers}
+            style={{ width: '100%', padding: '0.75rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)', background: (!department || loadingWorkers) ? 'var(--surface-soft)' : 'var(--bg-main)' }}
           >
-            <option value="">Select Officer...</option>
-            {officers.map(o => <option key={o.id} value={o.name}>{o.name}</option>)}
+            <option value="">{loadingWorkers ? 'Loading workers...' : 'Select Worker...'}</option>
+            {workersList.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
           </select>
+          {!loadingWorkers && department && workersList.length === 0 && (
+            <p style={{ fontSize: '0.75rem', color: 'var(--danger)', marginTop: '0.25rem' }}>No active workers found in this department.</p>
+          )}
         </div>
 
-        <Button variant="primary" onClick={handleAssign} disabled={loading || !department} style={{ marginTop: '0.5rem' }}>
+        <Button variant="primary" onClick={handleAssign} disabled={loading || !department || !worker} style={{ marginTop: '0.5rem' }}>
           {loading ? 'Assigning...' : 'Confirm Assignment'}
         </Button>
       </div>

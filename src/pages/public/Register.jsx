@@ -30,10 +30,8 @@ const Register = () => {
       let department = null;
       
       const code = inviteCode.trim().toUpperCase();
-      if (code === 'SUPER-ADMIN-999') role = 'super_admin';
-      else if (code === 'MUNI-ADMIN-555') role = 'municipal_admin';
-      else if (code === 'FIELD-WORK-001') { role = 'field_worker'; department = 'Roads'; }
-      else if (code === 'DEPT-ROADS-101') { role = 'department_officer'; department = 'Roads'; }
+      if (code === 'ADMIN-999') role = 'admin';
+      else if (code === 'WORKER-001') { role = 'worker'; department = 'Roads'; }
 
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       await updateProfile(userCredential.user, { displayName: name });
@@ -47,10 +45,10 @@ const Register = () => {
         createdAt: serverTimestamp()
       });
 
-      if (role === 'field_worker') {
+      if (role === 'worker') {
         navigate('/worker');
-      } else if (role !== 'citizen') {
-        navigate('/authority');
+      } else if (role === 'admin') {
+        navigate('/admin');
       } else {
         navigate('/citizen');
       }
